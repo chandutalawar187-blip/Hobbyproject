@@ -15,15 +15,16 @@ if (-not (Test-Path $sourceAnimation)) {
 }
 New-Item -ItemType Directory -Force $publishAssets | Out-Null
 Copy-Item $sourceAnimation (Join-Path $publishAssets "Laptop_Control_Center.lottie") -Force
+Copy-Item (Join-Path $root "src\LenovoLoqControl\Assets\app_icon.ico") (Join-Path $publishDir "app_icon.ico") -Force
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `
     -arch x64 `
     -d PublishDir=$publishDir `
-    -o (Join-Path $outputDir "LOQ-Control-1.0.7-x64.msi")
+    -o (Join-Path $outputDir "LOQ-Control-1.1.5-x64.msi")
 
 if ($LASTEXITCODE -ne 0) {
     throw "WiX failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.0.7-x64.msi')"
+Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.1.5-x64.msi')"

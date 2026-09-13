@@ -2,12 +2,14 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.0.7"
+           Version="1.1.5"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
-    <MajorUpgrade DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
     <MediaTemplate EmbedCab="yes" />
+    <Icon Id="LoqControlIcon" SourceFile="$(var.PublishDir)\app_icon.ico" />
 
     <Feature Id="MainFeature" Title="LOQ Control" Level="1">
       <ComponentRef Id="ApplicationComponent" />
@@ -32,14 +34,7 @@
       <Component Id="ApplicationComponent" Guid="*">
         <File Id="LoqControlExe"
               Source="$(var.PublishDir)\LoqControl.exe"
-              KeyPath="yes">
-          <Shortcut Id="StartMenuShortcut"
-                    Directory="ApplicationProgramsFolder"
-                    Name="LOQ Control"
-                    Description="Lenovo LOQ control center"
-                    WorkingDirectory="INSTALLFOLDER"
-                    Advertise="yes" />
-        </File>
+              KeyPath="yes" />
         <RegistryValue Root="HKLM"
                        Key="Software\LOQ Control"
                        Name="InstallPath"
@@ -51,6 +46,14 @@
 
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="StartMenuComponent" Guid="*">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="LOQ Control"
+                  Description="Lenovo LOQ control center"
+                  Target="[INSTALLFOLDER]LoqControl.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="LoqControlIcon"
+                  IconIndex="0"
+                  Advertise="no" />
         <RemoveFile Id="RemoveStartMenuFiles" Name="*" On="uninstall" />
         <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
         <RegistryValue Root="HKCU"
@@ -59,8 +62,25 @@
                        Type="integer"
                        Value="1"
                        KeyPath="yes" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="LOQ Control"
+                       Type="string"
+                       Value="&quot;[INSTALLFOLDER]LoqControl.exe&quot; --startup" />
       </Component>
     </DirectoryRef>
+
+    <CustomAction Id="LaunchApplication"
+                  FileRef="LoqControlExe"
+                  ExeCommand=""
+                  Execute="immediate"
+                  Impersonate="yes"
+                  Return="asyncNoWait" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication"
+              After="InstallFinalize"
+              Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
+    </InstallExecuteSequence>
 
   </Package>
 

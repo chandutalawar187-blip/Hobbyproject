@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Reflection;
 using System.Text;
+using Microsoft.Win32;
 
 namespace LenovoLoqControl.Services;
 
@@ -112,18 +113,23 @@ public sealed class UpdateService
         if (!File.Exists(installerPath))
             throw new FileNotFoundException("Downloaded installer was not found.", installerPath);
 
-        var applicationPath = Environment.ProcessPath
-            ?? throw new InvalidOperationException("The current application path is unavailable.");
+        var applicationPath = ResolveInstalledApplicationPath();
+        var currentProcessId = Environment.ProcessId;
         var scriptPath = Path.Combine(
             Path.GetDirectoryName(installerPath)
                 ?? throw new InvalidOperationException("The installer directory is unavailable."),
             "apply-update.ps1");
-        var script = $"""
-            $ErrorActionPreference = "Stop"
-            Start-Process -FilePath "msiexec.exe" -ArgumentList '/i', '{EscapePowerShell(installerPath)}', '/passive', '/norestart' -Wait
-            Start-Process -FilePath '{EscapePowerShell(applicationPath)}'
-            Remove-Item -LiteralPath '{EscapePowerShell(scriptPath)}' -Force -ErrorAction SilentlyContinue
-            """;
+        var script = string.Join(Environment.NewLine,
+            "$ErrorActionPreference = \"Stop\"",
+            $"while (Get-Process -Id {currentProcessId} -ErrorAction SilentlyContinue) {{",
+            "    Start-Sleep -Milliseconds 250",
+            "}",
+            $"$installer = Start-Process -FilePath \"msiexec.exe\" -ArgumentList '/i', '{EscapePowerShell(installerPath)}', '/passive', '/norestart' -Wait -PassThru",
+            "if ($installer.ExitCode -notin @(0, 3010)) {",
+            "    throw \"Windows Installer failed with exit code $($installer.ExitCode).\"",
+            "}",
+            $"Start-Process -FilePath '{EscapePowerShell(applicationPath)}'",
+            $"Remove-Item -LiteralPath '{EscapePowerShell(scriptPath)}' -Force -ErrorAction SilentlyContinue");
         File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         Process.Start(new ProcessStartInfo
@@ -137,6 +143,26 @@ public sealed class UpdateService
 
     private static string EscapePowerShell(string value) =>
         value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string ResolveInstalledApplicationPath()
+    {
+        var installPath = Registry.GetValue(
+            @"HKEY_LOCAL_MACHINE\Software\LOQ Control",
+            "InstallPath",
+            null) as string;
+        if (!string.IsNullOrWhiteSpace(installPath))
+        {
+            var installedPath = Path.Combine(installPath, "LoqControl.exe");
+            if (File.Exists(installedPath))
+                return installedPath;
+        }
+
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
+            return processPath;
+
+        throw new InvalidOperationException("The installed application path is unavailable.");
+    }
 
     private static HttpClient CreateClient()
     {

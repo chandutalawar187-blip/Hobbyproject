@@ -1,12 +1,14 @@
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using LenovoLoqControl.Services;
 
 namespace LenovoLoqControl;
 
 public partial class App : Application
 {
     private bool _startupCompleted;
+    private SingleInstanceService? _singleInstance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -36,7 +38,26 @@ public partial class App : Application
         };
 
         base.OnStartup(e);
+        if (!SingleInstanceService.TryCreate(out _singleInstance))
+        {
+            SingleInstanceService.ActivateExisting();
+            Shutdown();
+            return;
+        }
+
+        var singleInstance = _singleInstance
+            ?? throw new InvalidOperationException("The single-instance guard was not initialized.");
+        var window = new MainWindow();
+        MainWindow = window;
+        singleInstance.ActivationRequested += () => Dispatcher.Invoke(window.ShowFromAnotherInstance);
+        window.Show();
         _startupCompleted = true;
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _singleInstance?.Dispose();
+        base.OnExit(e);
     }
 
     private static Exception Unwrap(Exception exception)

@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.ComponentModel;
+using System.IO;
+using System.Windows.Media.Imaging;
 using Forms = System.Windows.Forms;
 using Microsoft.Win32;
 using LenovoLoqControl.Core;
@@ -409,9 +411,9 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         AppUiPreferences.Changed -= OnUiPreferencesChanged;
-        _shellTimer.Stop();
+        _shellTimer?.Stop();
         _hardware.Dispose();
-        _trayIcon.Dispose();
+        _trayIcon?.Dispose();
         base.OnClosed(e);
     }
 
@@ -428,13 +430,27 @@ public partial class MainWindow : Window
 
         var icon = new Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadApplicationIcon(),
             Text = "LOQ Control",
             ContextMenuStrip = menu,
             Visible = true
         };
         icon.DoubleClick += (_, _) => Dispatcher.Invoke(ShowFromTray);
         return icon;
+    }
+
+    private static System.Drawing.Icon LoadApplicationIcon()
+    {
+        var resource = Application.GetResourceStream(
+            new Uri("pack://application:,,,/Assets/app_icon.ico"));
+        if (resource is null)
+            return System.Drawing.SystemIcons.Application;
+
+        using var stream = resource.Stream;
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        buffer.Position = 0;
+        return new System.Drawing.Icon(buffer);
     }
 
     private void HandleClosing(object? sender, CancelEventArgs e)
@@ -451,6 +467,8 @@ public partial class MainWindow : Window
             Forms.ToolTipIcon.Info);
     }
 
+    internal void ShowFromAnotherInstance() => Dispatcher.Invoke(ShowFromTray);
+
     private void ShowFromTray()
     {
         Show();
@@ -460,6 +478,13 @@ public partial class MainWindow : Window
     }
 
     private void ExitFromTray()
+    {
+        _allowClose = true;
+        _trayIcon.Visible = false;
+        Close();
+    }
+
+    internal void CloseForUpdate()
     {
         _allowClose = true;
         _trayIcon.Visible = false;

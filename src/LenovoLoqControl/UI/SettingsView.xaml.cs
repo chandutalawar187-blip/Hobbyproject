@@ -86,7 +86,7 @@ public partial class SettingsView : UserControl
 
         var update = _availableUpdate;
         var answer = MessageBox.Show(
-            $"Download and install LOQ Control v{update.Version.ToString(3)} now?\n\nThe application will close while Windows Installer applies the update.",
+            $"Download LOQ Control v{update.Version.ToString(3)} now?",
             "LOQ Control update",
             MessageBoxButton.YesNo,
             MessageBoxImage.Information);
@@ -102,8 +102,24 @@ public partial class SettingsView : UserControl
             UpdateStatus.Text = $"Downloading {update.InstallerName}…";
             var progress = new Progress<double>(value => UpdateProgress.Value = value);
             var installer = await _updates.DownloadInstallerAsync(update, progress, CancellationToken.None);
+            var closeAnswer = MessageBox.Show(
+                "The update has finished downloading. LOQ Control must close before the installer can replace it. Close the current session and install the update now?",
+                "LOQ Control update ready",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+            if (closeAnswer != MessageBoxResult.Yes)
+            {
+                UpdateStatus.Text = "Update downloaded. Installation was postponed.";
+                InstallUpdateButton.IsEnabled = true;
+                CheckUpdatesButton.IsEnabled = true;
+                return;
+            }
+
             UpdateService.LaunchInstallerAndRestart(installer);
-            Application.Current.Shutdown();
+            if (Application.Current.MainWindow is MainWindow mainWindow)
+                mainWindow.CloseForUpdate();
+            else
+                Application.Current.Shutdown();
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException)
         {
