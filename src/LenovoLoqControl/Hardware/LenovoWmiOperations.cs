@@ -20,8 +20,8 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
     public void SetSmartFanMode(uint mode)
     {
         // Lenovo LOQ firmware exposes 1=Quiet, 2=Balanced, 3=Performance,
-        // 244=Max Cooling, and 255=Custom on the verified five-state path.
-        if (mode is not (1u or 2u or 3u or 244u or 255u))
+        // 224=Max Cooling, and 255=Custom on the verified five-state path.
+        if (mode is not (1u or 2u or 3u or 224u or 255u))
             throw new ArgumentOutOfRangeException(nameof(mode), "The firmware mode is not in the verified Lenovo allowlist.");
 
         InvokeMethod(GameZoneQuery, "SetSmartFanMode",
@@ -35,7 +35,7 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
             var result = InvokeMethod(GameZoneQuery, "GetSmartFanMode",
                 new Dictionary<string, object>());
             var mode = ReadInt32(result, "Data");
-            return mode is 1 or 2 or 3 or 244 or 255 ? (uint)mode : null;
+            return mode is 1 or 2 or 3 or 224 or 255 ? (uint)mode : null;
         }
         catch (Exception ex) when (ex is ManagementException or InvalidOperationException
             or InvalidCastException or FormatException or UnauthorizedAccessException

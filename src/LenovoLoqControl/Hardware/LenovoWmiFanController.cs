@@ -32,7 +32,7 @@ public sealed class LenovoWmiFanController : IFanController
             1 => FanMode.Quiet,
             2 => FanMode.Auto,
             3 => FanMode.Performance,
-            244 => FanMode.MaxCooling,
+            224 => FanMode.MaxCooling,
             255 => FanMode.Custom,
             _ => null
         }, cancellationToken);
@@ -73,7 +73,7 @@ public sealed class LenovoWmiFanController : IFanController
             if (mode == FanMode.MaxCooling)
             {
                 _operations.SetFullSpeed(false);
-                _operations.SetSmartFanMode(244u);
+                _operations.SetSmartFanMode(224u);
                 return new FanControlResult(true,
                     "Maximum firmware cooling mode applied.");
             }
