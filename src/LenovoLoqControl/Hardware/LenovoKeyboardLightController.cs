@@ -42,6 +42,13 @@ public sealed class LenovoKeyboardLightController : IKeyboardLightController
             { return new FanControlResult(false, $"Keyboard lighting was not changed: {ex.Message}"); }
         }, cancellationToken);
     }
+    public Task<KeyboardRgbSettings?> GetCurrentRgbSettingsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ZoneType != KeyboardZoneType.FourZoneRgb)
+            return Task.FromResult<KeyboardRgbSettings?>(null);
+        return Task.Run(() => _operations.GetCurrentRgbSettings(), cancellationToken);
+    }
     public Task<FanControlResult> SetRgbEffectAsync(KeyboardRgbSettings settings, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

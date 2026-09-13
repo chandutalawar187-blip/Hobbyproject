@@ -20,7 +20,9 @@ public partial class KeyboardLightingView : UserControl
     private KeyboardLightingPresenter? _presenter;
     private CancellationTokenSource? _lifetimeCts;
     private bool _stylesReady;
+    private bool _syncingDeviceState;
     private CancellationTokenSource? _rgbPreviewCts;
+    private Task? _deviceSyncTask;
     private Style? _levelIdleStyle;
     private Style? _levelSelectedStyle;
 
@@ -65,9 +67,19 @@ public partial class KeyboardLightingView : UserControl
         try
         {
             await _presenter.RefreshAsync(_lifetimeCts.Token);
+            _deviceSyncTask = SyncDeviceStateAsync(_lifetimeCts.Token);
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    private async Task SyncDeviceStateAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            await _presenter!.RefreshAsync(cancellationToken);
         }
     }
 
@@ -75,6 +87,7 @@ public partial class KeyboardLightingView : UserControl
     {
         _lifetimeCts?.Cancel();
         _rgbPreviewCts?.Cancel();
+        _deviceSyncTask = null;
         _lifetimeCts?.Dispose();
         _rgbPreviewCts?.Dispose();
         _lifetimeCts = null;
@@ -152,6 +165,8 @@ public partial class KeyboardLightingView : UserControl
         else if (isFourZone)
         {
             KeyboardPreview.LightLevel = null;
+            if (state.LastConfirmedRgbSettings is { } confirmed)
+                ApplyConfirmedRgbControls(confirmed);
             if (!state.IsBusy && state.LastConfirmedRgbSettings is not null)
                 UpdateLiveKeyboardPreview(state.LastConfirmedRgbSettings);
             else
@@ -294,15 +309,40 @@ public partial class KeyboardLightingView : UserControl
         await _presenter.ApplyRgbEffectAsync(settings, _lifetimeCts.Token);
     }
 
-    private void RgbEffectChipChecked(object sender, RoutedEventArgs e) =>
-        QueueRgbPreview();
+    private void RgbEffectChipChecked(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingDeviceState)
+            QueueRgbPreview();
+    }
 
-    private void RgbPreviewChanged(object sender, RoutedEventArgs e) =>
-        QueueRgbPreview();
+    private void RgbPreviewChanged(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingDeviceState)
+            QueueRgbPreview();
+    }
+
+    private void ApplyConfirmedRgbControls(KeyboardRgbSettings settings)
+    {
+        _syncingDeviceState = true;
+        try
+        {
+            EffectOff.IsChecked = settings.Effect == KeyboardRgbEffect.Off;
+            EffectStatic.IsChecked = settings.Effect == KeyboardRgbEffect.Static;
+            EffectBreathing.IsChecked = settings.Effect == KeyboardRgbEffect.Breathing;
+            EffectColorCycle.IsChecked = settings.Effect == KeyboardRgbEffect.ColorCycle;
+            EffectWave.IsChecked = settings.Effect == KeyboardRgbEffect.Wave;
+            RgbColorText.Text = $"#{settings.Color.Red:X2}{settings.Color.Green:X2}{settings.Color.Blue:X2}";
+            RgbSpeedSlider.Value = settings.Speed;
+        }
+        finally
+        {
+            _syncingDeviceState = false;
+        }
+    }
 
     private async void QueueRgbPreview()
     {
-        if (_presenter is null || _lifetimeCts is null || _lifetimeCts.IsCancellationRequested)
+        if (_syncingDeviceState || _presenter is null || _lifetimeCts is null || _lifetimeCts.IsCancellationRequested)
             return;
         if (!TryGetRgbSettings(out var settings))
             return;

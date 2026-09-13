@@ -25,6 +25,7 @@ public interface IKeyboardLightController : IDisposable
     string ZoneDescription { get; }
     string AvailabilityMessage { get; }
     Task<KeyboardLightLevel?> GetCurrentLevelAsync(CancellationToken cancellationToken);
+    Task<KeyboardRgbSettings?> GetCurrentRgbSettingsAsync(CancellationToken cancellationToken);
     Task<FanControlResult> SetLevelAsync(KeyboardLightLevel level, CancellationToken cancellationToken);
     Task<FanControlResult> SetRgbEffectAsync(KeyboardRgbSettings settings, CancellationToken cancellationToken);
 }

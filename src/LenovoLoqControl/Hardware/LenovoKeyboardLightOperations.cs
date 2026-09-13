@@ -148,6 +148,56 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
             }
         }
 
+    public KeyboardRgbSettings? GetCurrentRgbSettings()
+    {
+        if (ZoneType != KeyboardZoneType.FourZoneRgb)
+            return null;
+
+        lock (_hidGate)
+        {
+            using var handle = OpenVerifiedRgbDevice();
+            var packet = new byte[33];
+            if (!HidD_GetFeature(handle, packet, packet.Length))
+            {
+                LogRgb($"get-feature failed win32={Marshal.GetLastWin32Error()}");
+                return null;
+            }
+
+            if (packet[0] != 0xCC || packet[1] != 0x16)
+            {
+                LogRgb($"get-feature ignored unexpected-header={Convert.ToHexString(packet)}");
+                return null;
+            }
+
+            var effect = packet[2] switch
+            {
+                0x00 => KeyboardRgbEffect.Off,
+                0x01 => KeyboardRgbEffect.Static,
+                0x03 => KeyboardRgbEffect.Breathing,
+                0x04 => KeyboardRgbEffect.Wave,
+                0x06 => KeyboardRgbEffect.ColorCycle,
+                _ => (KeyboardRgbEffect?)null
+            };
+            if (effect is null)
+                return null;
+
+            var speed = packet[3] switch
+            {
+                1 => (byte)1,
+                2 => (byte)4,
+                3 => (byte)7,
+                4 => (byte)10,
+                _ => (byte)3
+            };
+            var settings = new KeyboardRgbSettings(
+                effect.Value,
+                new KeyboardRgbColor(packet[5], packet[6], packet[7]),
+                speed);
+            LogRgb($"get-feature succeeded effect={settings.Effect} color=#{settings.Color.Red:X2}{settings.Color.Green:X2}{settings.Color.Blue:X2} speed={settings.Speed}");
+            return settings;
+        }
+    }
+
         private static SafeFileHandle OpenVerifiedRgbDevice()
         {
             HidD_GetHidGuid(out var hidGuid);
@@ -563,6 +613,9 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
     [DllImport("hid.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool HidD_SetFeature(SafeFileHandle handle, byte[] report, int reportLength);
+    [DllImport("hid.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool HidD_GetFeature(SafeFileHandle handle, byte[] report, int reportLength);
     [DllImport("hid.dll")]
     private static extern int HidP_GetCaps(IntPtr data, out HidCaps caps);
     [DllImport("setupapi.dll", SetLastError = true)]

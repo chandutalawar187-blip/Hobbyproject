@@ -34,8 +34,6 @@ public class KeyboardLightingPresenterTests
         Assert.Equal(expectWhiteControls, state.ShowWhiteControls);
         Assert.Equal(!expectWhiteControls && expectedMode != KeyboardLightingUiMode.Unsupported,
             state.ShowRgbComingSoon);
-        // RGB layouts stay informational until a verified control path ships.
-        Assert.False(expectWhiteControls && state.ShowRgbComingSoon);
     }
 
     [Fact]
@@ -68,6 +66,23 @@ public class KeyboardLightingPresenterTests
         Assert.False(presenter.State.ShowWhiteControls);
         Assert.True(presenter.State.ShowRgbComingSoon);
         Assert.Contains("Apply verified", presenter.State.DetailBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FourZoneRgb_RefreshLoadsCurrentDeviceState()
+    {
+        var settings = new KeyboardRgbSettings(
+            KeyboardRgbEffect.ColorCycle,
+            new KeyboardRgbColor(12, 34, 56),
+            7);
+        var fake = FakeKeyboardLightController.Rgb(KeyboardZoneType.FourZoneRgb);
+        fake.CurrentRgb = settings;
+        var presenter = new KeyboardLightingPresenter(fake);
+
+        await presenter.RefreshAsync(CancellationToken.None);
+
+        Assert.Equal(settings, presenter.State.LastConfirmedRgbSettings);
+        Assert.Equal(1, fake.RgbGetCount);
     }
 
     [Fact]
@@ -218,6 +233,8 @@ internal sealed class FakeKeyboardLightController : IKeyboardLightController
     public TimeSpan SetDelay { get; set; }
     public int GetCount { get; private set; }
     public int SetCount { get; private set; }
+    public int RgbGetCount { get; private set; }
+    public KeyboardRgbSettings? CurrentRgb { get; set; }
 
     public static FakeKeyboardLightController White(KeyboardLightLevel level) => new()
     {
@@ -249,6 +266,12 @@ internal sealed class FakeKeyboardLightController : IKeyboardLightController
             await Task.Delay(GetDelay, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         return Current;
+    }
+
+    public Task<KeyboardRgbSettings?> GetCurrentRgbSettingsAsync(CancellationToken cancellationToken)
+    {
+        RgbGetCount++;
+        return Task.FromResult(CurrentRgb);
     }
 
     public async Task<FanControlResult> SetLevelAsync(KeyboardLightLevel level, CancellationToken cancellationToken)

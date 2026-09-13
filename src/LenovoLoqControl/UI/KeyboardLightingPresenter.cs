@@ -65,6 +65,25 @@ public sealed class KeyboardLightingPresenter
 
             if (snapshot.UiMode != KeyboardLightingUiMode.WhiteBacklit)
             {
+                if (snapshot.UiMode == KeyboardLightingUiMode.FourZoneRgb)
+                {
+                    var rgb = await _controller.GetCurrentRgbSettingsAsync(cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Replace(State with
+                    {
+                        IsLoading = false,
+                        IsApplying = false,
+                        LastConfirmedRgbSettings = rgb,
+                        StatusMessage = rgb is null
+                            ? "Keyboard state readback is unavailable."
+                            : $"Synchronized with keyboard: {rgb.Effect}.",
+                        StatusKind = rgb is null
+                            ? KeyboardLightingStatusKind.Warning
+                            : KeyboardLightingStatusKind.Success
+                    });
+                    return;
+                }
+
                 Replace(State with
                 {
                     IsLoading = false,
@@ -114,7 +133,8 @@ public sealed class KeyboardLightingPresenter
         catch (Exception ex) when (ex is TimeoutException
                                    or UnauthorizedAccessException
                                    or ManagementException
-                                   or InvalidOperationException)
+                                   or InvalidOperationException
+                                   or System.IO.IOException)
         {
             Replace(State with
             {
