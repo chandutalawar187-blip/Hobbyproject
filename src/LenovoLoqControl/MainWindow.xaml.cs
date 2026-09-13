@@ -35,6 +35,7 @@ public partial class MainWindow : Window
             NavDashboard,
             NavFan,
             NavProfiles,
+            NavProjects,
             NavDiagnostics,
             NavSettings
         ];
@@ -123,6 +124,9 @@ public partial class MainWindow : Window
     private void ProfilesClick(object sender, RoutedEventArgs e) =>
         Navigate(PageKind.Profiles, "Profiles", "Workload intent without hiding firmware limits", new ProfilesView(_hardware));
 
+    private void ProjectsClick(object sender, RoutedEventArgs e) =>
+        Navigate(PageKind.Projects, "Projects", "Safe project workflows and maintenance actions", new ProjectsView(_hardware));
+
     private void DiagnosticsClick(object sender, RoutedEventArgs e) =>
         Navigate(PageKind.Diagnostics, "Diagnostics", "Honest compatibility and capability report", new DiagnosticsView(_hardware));
 
@@ -145,6 +149,7 @@ public partial class MainWindow : Window
             PageKind.Dashboard => NavDashboard,
             PageKind.Fan => NavFan,
             PageKind.Profiles => NavProfiles,
+            PageKind.Projects => NavProjects,
             PageKind.Diagnostics => NavDiagnostics,
             _ => NavSettings
         };
@@ -331,6 +336,7 @@ public partial class MainWindow : Window
         Dashboard,
         Fan,
         Profiles,
+        Projects,
         Diagnostics,
         Settings
     }

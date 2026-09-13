@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a safe, model-verifiable feature
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: Requested capability
+      description: Describe the user-visible behavior and supported hardware.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Verification and safety notes
+      description: Link public documentation or explain how the feature can be validated without arbitrary EC writes.

@@ -95,8 +95,23 @@
 
   <Style TargetType="ComboBoxItem">
     <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Elevated}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
     <Setter Property="Padding" Value="10,6"/>
     <Setter Property="MinHeight" Value="32"/>
+    <Style.Triggers>
+      <Trigger Property="IsHighlighted" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Brush.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextDisabled}"/>
+      </Trigger>
+    </Style.Triggers>
   </Style>
 
   <Style x:Key="Setting.Row" TargetType="Border">

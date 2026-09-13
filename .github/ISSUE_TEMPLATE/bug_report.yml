@@ -1,0 +1,23 @@
+name: Bug report
+description: Report a reproducible LOQ Control issue
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include the exact visible error and reproduction steps.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Lenovo LOQ model and BIOS
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics output
+      description: Remove serial numbers and other sensitive information before posting.

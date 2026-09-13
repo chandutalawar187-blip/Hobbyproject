@@ -4,7 +4,7 @@
   <Style x:Key="FocusVisual.Default" TargetType="Control">
     <Setter Property="Template">
       <Setter.Value>
-        <ControlTemplate>
+        <ControlTemplate TargetType="Control">
           <Rectangle Margin="2"
                      StrokeThickness="2"
                      Stroke="{DynamicResource Brush.FocusRing}"

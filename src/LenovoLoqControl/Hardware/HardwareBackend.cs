@@ -7,10 +7,12 @@ public sealed class HardwareBackend : IHardwareBackend
     public IHardwareMonitor Monitor { get; }
     public IFanController FanController { get; }
     public IGpuOverclockController GpuOverclock { get; }
+    public IKeyboardLightController KeyboardLight { get; }
 
     public HardwareBackend()
     {
         GpuOverclock = new NvidiaGpuOverclockController();
+        KeyboardLight = new LenovoKeyboardLightController();
         Monitor = new WindowsHardwareMonitor(GpuOverclock is NvidiaGpuOverclockController nvidia
             ? nvidia.ReadCurrentGraphicsClockGhz
             : null);
@@ -29,6 +31,7 @@ public sealed class HardwareBackend : IHardwareBackend
     {
         FanController.Dispose();
         GpuOverclock.Dispose();
+        KeyboardLight.Dispose();
         if (!ReferenceEquals(Monitor, null))
             Monitor.Dispose();
     }

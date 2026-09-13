@@ -76,6 +76,12 @@
                   Click="ProfilesClick"
                   ToolTip="Quiet, Balanced, Performance, and Custom intents"
                   AutomationProperties.Name="Profiles"/>
+          <Button x:Name="NavProjects"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Projects"
+                  Click="ProjectsClick"
+                  ToolTip="Project workflows and maintenance actions"
+                  AutomationProperties.Name="Projects"/>
           <Button x:Name="NavDiagnostics"
                   Style="{StaticResource NavigationButton}"
                   Content="Diagnostics"

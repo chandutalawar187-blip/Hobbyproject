@@ -23,6 +23,18 @@ The desktop app stays alive in the Windows notification area when its window is 
 
 The shared hardware monitor begins its first WMI/NVAPI sample while the application shell is being created and briefly caches the result. Dashboard, shell status, and Fan Control therefore reuse the same initial snapshot instead of waiting for separate startup queries.
 
+## Keyboard lighting backend
+
+The hardware backend detects keyboard capability instead of assuming a LOQ keyboard type. It probes Lenovo HID first for RGB-capable keyboards, then Lenovo's verified `LENOVO_LIGHTING_DATA` / `LENOVO_LIGHTING_METHOD` interfaces and the Toolkit-compatible `EnergyDrv` keyboard IOCTL fallback for white backlight. The verified Lenovo/ITE legacy RGB path uses vendor ID `048D`, a `C9xx` product family, and a 33-byte feature report with the `CC 16` protocol header used by Lenovo Toolkit. The LOQ 2024 `PID C993` identity remains a supported fallback for classification when its descriptor is nonstandard. `IKeyboardLightController` reports `WhiteBacklit`, `FourZoneRgb`, `TwentyFourZoneRgb`, `RgbLayoutUnknown`, or `Unsupported`; `Off`, `Low`, and `High` writes are enabled only for a verified white keyboard path. Exact RGB zone counts are never guessed from the laptop model: they require a matching HID identity or report descriptor, otherwise the software explicitly reports that the RGB layout is unknown.
+
+The Fan Control page includes a **Keyboard Lighting** card that follows those capabilities: white-backlit keyboards get Off/Low/High controls wired only through `GetCurrentLevelAsync` / `SetLevelAsync`; verified 4-zone RGB keyboards expose bounded effect, color, and speed controls through the gated Lenovo/ITE HID path. 24-zone RGB and unknown layouts remain informational until their protocols are independently verified. Unsupported hardware shows an unavailable card with the backend availability message.
+
+## Projects and repository workflows
+
+The desktop **Projects** tab provides explicit maintenance workflows for capability refresh, a shared telemetry snapshot, verified Balanced-mode recovery, and optional hardware-service status. Each action reports success, unsupported hardware, or the provider error; no workflow silently claims an operation succeeded.
+
+Repository automation is under `.github\workflows`: `build-test.yml` validates the x64 solution on pushes and pull requests, and `publish-artifacts.yml` publishes the desktop app and optional hardware service for releases or manual runs. Bug and feature issue forms are included under `.github\ISSUE_TEMPLATE`.
+
 For a distributable x64 executable, publish self-contained and single-file:
 
 ```powershell
@@ -48,7 +60,7 @@ administrator privileges.
 * **Manual fan control:** custom fan tables are available only when the active Lenovo table passes capability and shape validation. The backend clears the separate full-speed flag, selects Custom mode, and sends the validated 64-byte table through direct WMI calls. Firmware acceptance is not treated as proof that the table persisted.
 * **Custom Extreme Mode:** the Fan Control page exposes an Extreme Mode toggle inside Custom mode. It selects Custom firmware mode and enables the verified full-speed override without requiring a curve apply. Disabling it clears the override while leaving Custom mode selected. AC power is required.
 * **NVIDIA GPU overclock:** when NVIDIA NVAPI detects a compatible discrete GPU, Custom mode exposes bounded offsets of up to +150 MHz core and +200 MHz VRAM. The default values match the requested 3.00→3.15 GHz and 8.00→8.20 GHz targets as offsets, but the actual live clock remains workload/boost controlled. The control requires AC power and provides an explicit reset.
-* **Profiles and settings:** these pages are currently explanatory UI placeholders. Selecting a profile, startup toggles, and monitoring refresh settings do not persist or change hardware. “Start minimized” does not create a tray icon yet.
+* **Keyboard lighting:** white-backlit keyboards expose Off / Low / High on Fan Control through the verified Lenovo lighting WMI path. Verified 4-zone RGB keyboards expose effect controls backed by a capability-gated HID write path; 24-zone and unknown layouts are detected but remain read-only until verified. The application reports command failures explicitly and does not claim physical RGB success without a device response.
 * **Diagnostics:** identity checks are shown for Lenovo and LOQ; unsupported sensor/control capabilities are reported as unavailable. The export button is not wired yet.
 
 For example, a system with EnergyDrv should show “Preset modes available” and enable three mode buttons while still showing fan RPM as **Unavailable**. A system without the Lenovo driver should show “Monitoring only” for the performance-mode capability; Windows telemetry can still appear. Neither state requires administrator elevation.
