@@ -72,10 +72,15 @@ public sealed class LenovoWmiFanController : IFanController
         {
             if (mode == FanMode.MaxCooling)
             {
+                // Mode 224 selects Lenovo's Extreme/Max Cooling profile. The
+                // separate verified feature is required to force both fans to
+                // full duty; selecting the profile alone can remain around
+                // the normal performance-mode RPM.
                 _operations.SetFullSpeed(false);
                 _operations.SetSmartFanMode(224u);
+                _operations.SetFullSpeed(true);
                 return new FanControlResult(true,
-                    "Maximum firmware cooling mode applied.");
+                    "Maximum firmware cooling applied. Both fans are set to full speed.");
             }
 
             if (mode == FanMode.Custom)
