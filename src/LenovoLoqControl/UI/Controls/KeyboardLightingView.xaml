@@ -215,14 +215,14 @@
   </UserControl.Resources>
 
   <Border x:Name="RootCard" Style="{DynamicResource Card.Metric}" Margin="0,0,0,16" Padding="22,20">
-    <StackPanel x:Name="RgbColorPanel">
+    <StackPanel>
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel>
+        <StackPanel x:Name="RgbColorPanel">
           <TextBlock x:Name="TitleText"
                      Style="{DynamicResource Text.Subtitle}"
                      Text="Keyboard Lighting"/>
