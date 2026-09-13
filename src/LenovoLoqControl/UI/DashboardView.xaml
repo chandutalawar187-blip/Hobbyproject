@@ -47,6 +47,15 @@
           </StackPanel>
         </Grid>
       </Border>
+      <Border x:Name="UnsupportedDeviceBanner"
+              Style="{StaticResource Badge.Warning}"
+              Padding="14,10"
+              Margin="0,0,0,8"
+              Visibility="Collapsed">
+        <TextBlock x:Name="UnsupportedDeviceText"
+                   Style="{StaticResource Badge.Text}"
+                   TextWrapping="Wrap"/>
+      </Border>
 
       <!-- Primary cards -->
       <UniformGrid x:Name="PrimaryMetricsGrid" Columns="3" Margin="0,4,0,8"
