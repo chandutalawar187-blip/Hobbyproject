@@ -2,11 +2,12 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.0.7"
+           Version="1.0.8"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
-    <MajorUpgrade DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Feature Id="MainFeature" Title="LOQ Control" Level="1">

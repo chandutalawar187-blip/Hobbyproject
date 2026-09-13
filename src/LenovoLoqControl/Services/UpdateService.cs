@@ -114,16 +114,22 @@ public sealed class UpdateService
 
         var applicationPath = Environment.ProcessPath
             ?? throw new InvalidOperationException("The current application path is unavailable.");
+        var currentProcessId = Environment.ProcessId;
         var scriptPath = Path.Combine(
             Path.GetDirectoryName(installerPath)
                 ?? throw new InvalidOperationException("The installer directory is unavailable."),
             "apply-update.ps1");
-        var script = $"""
-            $ErrorActionPreference = "Stop"
-            Start-Process -FilePath "msiexec.exe" -ArgumentList '/i', '{EscapePowerShell(installerPath)}', '/passive', '/norestart' -Wait
-            Start-Process -FilePath '{EscapePowerShell(applicationPath)}'
-            Remove-Item -LiteralPath '{EscapePowerShell(scriptPath)}' -Force -ErrorAction SilentlyContinue
-            """;
+        var script = string.Join(Environment.NewLine,
+            "$ErrorActionPreference = \"Stop\"",
+            $"while (Get-Process -Id {currentProcessId} -ErrorAction SilentlyContinue) {{",
+            "    Start-Sleep -Milliseconds 250",
+            "}",
+            $"$installer = Start-Process -FilePath \"msiexec.exe\" -ArgumentList '/i', '{EscapePowerShell(installerPath)}', '/passive', '/norestart' -Wait -PassThru",
+            "if ($installer.ExitCode -notin @(0, 3010)) {",
+            "    throw \"Windows Installer failed with exit code $($installer.ExitCode).\"",
+            "}",
+            $"Start-Process -FilePath '{EscapePowerShell(applicationPath)}'",
+            $"Remove-Item -LiteralPath '{EscapePowerShell(scriptPath)}' -Force -ErrorAction SilentlyContinue");
         File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         Process.Start(new ProcessStartInfo
