@@ -1,4 +1,6 @@
 using System.Management;
+using System.IO;
+using System.Text.Json;
 using LenovoLoqControl.Core;
 
 namespace LenovoLoqControl.UI;
@@ -17,7 +19,10 @@ public sealed class KeyboardLightingPresenter
     public KeyboardLightingPresenter(IKeyboardLightController controller)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
-        _state = KeyboardLightingPresentation.CreateInitial(controller);
+        _state = KeyboardLightingPresentation.CreateInitial(controller) with
+        {
+            LastConfirmedRgbSettings = KeyboardRgbStateStore.Load()
+        };
     }
 
     public event Action? StateChanged;
@@ -73,12 +78,16 @@ public sealed class KeyboardLightingPresenter
                     {
                         IsLoading = false,
                         IsApplying = false,
-                        LastConfirmedRgbSettings = rgb,
-                        StatusMessage = rgb is null
-                            ? "Keyboard state readback is unavailable."
-                            : $"Synchronized with keyboard: {rgb.Effect}.",
+                        LastConfirmedRgbSettings = rgb ?? State.LastConfirmedRgbSettings,
+                        StatusMessage = rgb is not null
+                            ? $"Synchronized with keyboard: {rgb.Effect}."
+                            : State.LastConfirmedRgbSettings is not null
+                                ? "Using the last RGB state confirmed by this application."
+                                : "Keyboard state readback is unavailable.",
                         StatusKind = rgb is null
-                            ? KeyboardLightingStatusKind.Warning
+                            ? State.LastConfirmedRgbSettings is not null
+                                ? KeyboardLightingStatusKind.Neutral
+                                : KeyboardLightingStatusKind.Warning
                             : KeyboardLightingStatusKind.Success
                     });
                     return;
@@ -277,7 +286,10 @@ public sealed class KeyboardLightingPresenter
                     : result.Message,
                 StatusKind = result.Accepted ? KeyboardLightingStatusKind.Success : KeyboardLightingStatusKind.Error
             });
+            if (result.Accepted)
+                KeyboardRgbStateStore.Save(settings);
         }
+
         catch (OperationCanceledException)
         {
             Replace(State with { IsApplying = false });
@@ -289,6 +301,45 @@ public sealed class KeyboardLightingPresenter
         finally
         {
             EndOperation();
+        }
+    }
+
+    private static class KeyboardRgbStateStore
+    {
+        private static readonly string Path = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LenovoLoqControl",
+            "keyboard-rgb-state.json");
+
+        public static KeyboardRgbSettings? Load()
+        {
+            try
+            {
+                if (!File.Exists(Path))
+                    return null;
+                var state = JsonSerializer.Deserialize<KeyboardRgbSettings>(File.ReadAllText(Path));
+                state?.Validate();
+                return state;
+            }
+            catch (Exception ex) when (ex is JsonException
+                                       or IOException
+                                       or UnauthorizedAccessException
+                                       or ArgumentOutOfRangeException)
+            {
+                return null;
+            }
+        }
+
+        public static void Save(KeyboardRgbSettings settings)
+        {
+            try
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+                File.WriteAllText(Path, JsonSerializer.Serialize(settings));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
         }
     }
 
