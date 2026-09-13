@@ -657,6 +657,16 @@ public partial class FanControlView : UserControl
         return FanMode.Auto;
     }
 
+    private Button ModeButtonFor(FanMode mode) => mode switch
+    {
+        FanMode.Quiet => ModeSilent,
+        FanMode.Auto or FanMode.Balanced => ModeAuto,
+        FanMode.Performance => ModePerformance,
+        FanMode.MaxCooling => ModeMaxCooling,
+        FanMode.Custom => ModeCustom,
+        _ => ModeAuto
+    };
+
     /// <summary>
     /// Syncs hex telemetry accents to the active fan mode palette. UI-only.
     /// </summary>
@@ -752,6 +762,9 @@ public partial class FanControlView : UserControl
             LastUpdatedText.Text = $"Updated {reading.Timestamp.ToLocalTime():HH:mm:ss}";
             AnimateLastUpdated();
             ApplyTelemetry(reading);
+            var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
+            if (mode is FanMode currentMode)
+                HighlightMode(ModeButtonFor(currentMode));
             if (_curveGraph is not null)
                 _curveGraph.CurrentTemperature = reading.CpuTemperature ?? reading.GpuTemperature;
         }
