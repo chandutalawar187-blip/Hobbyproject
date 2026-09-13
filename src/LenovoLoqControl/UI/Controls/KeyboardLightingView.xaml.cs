@@ -373,6 +373,7 @@ public partial class KeyboardLightingView : UserControl
             RgbSpeedValue.Text = "03";
             RgbSpeedSlider.IsEnabled = true;
             RgbSpeedValue.Opacity = 1;
+            RgbSpeedPanel.Visibility = Visibility.Visible;
             return;
         }
 
@@ -389,6 +390,9 @@ public partial class KeyboardLightingView : UserControl
             : settings.Speed.ToString("00");
         RgbSpeedSlider.IsEnabled = settings.Effect != KeyboardRgbEffect.Static;
         RgbSpeedValue.Opacity = settings.Effect == KeyboardRgbEffect.Static ? 0.45 : 1;
+        RgbSpeedPanel.Visibility = settings.Effect == KeyboardRgbEffect.Static
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     private bool TryGetRgbSettings(out KeyboardRgbSettings settings)

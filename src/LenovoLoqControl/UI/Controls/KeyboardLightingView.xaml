@@ -423,7 +423,7 @@
                   </Grid>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2">
+                <StackPanel x:Name="RgbSpeedPanel" Grid.Column="2">
                   <Grid>
                     <TextBlock Style="{StaticResource Rgb.Caption}" Text="PULSE SPEED · 4 LEVELS (ANIMATED MODES)"/>
                     <TextBlock x:Name="RgbSpeedValue"
