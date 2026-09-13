@@ -236,6 +236,13 @@ public sealed class NavLottieIcon : Border
             return;
         }
 
+        if (fileName.EndsWith(".lottie", StringComparison.OrdinalIgnoreCase))
+        {
+            Visibility = Visibility.Collapsed;
+            _assetBound = true;
+            return;
+        }
+
         var packName = fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
             ? fileName
             : fileName + ".json";

@@ -34,6 +34,7 @@
     </Content>
     <Content Include="Assets\Laptop_Control_Center.lottie">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="Assets\i\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
