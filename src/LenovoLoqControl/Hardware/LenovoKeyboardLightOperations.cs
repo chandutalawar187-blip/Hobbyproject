@@ -128,6 +128,8 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
                     _ => throw new ArgumentOutOfRangeException(nameof(settings))
                 };
                 packet[3] = settings.Effect is KeyboardRgbEffect.Breathing
+                    or KeyboardRgbEffect.ColorCycle
+                    or KeyboardRgbEffect.Wave
                     ? MapSpeed(settings.Speed)
                     : (byte)0;
                 packet[4] = settings.Effect == KeyboardRgbEffect.Off ? (byte)0 : (byte)2;
