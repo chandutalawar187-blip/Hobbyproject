@@ -8,6 +8,7 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 {
     private const string Scope = @"root\WMI";
     private const string GameZoneQuery = "SELECT * FROM LENOVO_GAMEZONE_DATA";
+    private const uint FanFullSpeedFeatureId = 0x04020000;
 
     public bool IsSmartFanSupported { get; }
 
@@ -18,9 +19,9 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 
     public void SetSmartFanMode(uint mode)
     {
-        // Lenovo LOQ firmware exposes 1=Quiet, 2=Balanced, 3=Performance,
-        // 224=Max Cooling, and 255=Custom on the verified five-state path.
-        if (mode is not (1u or 2u or 3u or 224u or 255u))
+        // 255 is the verified Custom backing mode. Max Cooling is an app-only
+        // action layered on that mode and is not added to Fn+Q.
+        if (mode is not (1u or 2u or 3u or 255u))
             throw new ArgumentOutOfRangeException(nameof(mode), "The firmware mode is not in the verified Lenovo allowlist.");
 
         InvokeMethod(GameZoneQuery, "SetSmartFanMode",
@@ -34,7 +35,7 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
             var result = InvokeMethod(GameZoneQuery, "GetSmartFanMode",
                 new Dictionary<string, object>());
             var mode = ReadInt32(result, "Data");
-            return mode is 1 or 2 or 3 or 224 or 255 ? (uint)mode : null;
+            return mode is 1 or 2 or 3 or 255 ? (uint)mode : null;
         }
         catch (Exception ex) when (ex is ManagementException or InvalidOperationException
             or InvalidCastException or FormatException or UnauthorizedAccessException
@@ -46,25 +47,13 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 
     public void SetFullSpeed(bool enabled)
     {
-        for (var attempt = 1; attempt <= 3; attempt++)
-        {
-            InvokeMethod("SELECT * FROM LENOVO_FAN_METHOD", "Fan_Set_FullSpeed",
-                new Dictionary<string, object> { ["Status"] = enabled ? 1 : 0 });
-            if (ReadFullSpeed() == enabled)
-                return;
-
-            if (attempt < 3)
-                Thread.Sleep(100);
-        }
-
-        throw new InvalidOperationException($"Lenovo Fan_Set_FullSpeed did not verify state {enabled}.");
-    }
-
-    private static bool ReadFullSpeed()
-    {
-        var result = InvokeMethod("SELECT * FROM LENOVO_FAN_METHOD", "Fan_Get_FullSpeed",
-            new Dictionary<string, object>());
-        return result?["Status"]?.Value is bool enabled && enabled;
+        var value = enabled ? 1 : 0;
+        InvokeMethod("SELECT * FROM LENOVO_OTHER_METHOD", "SetFeatureValue",
+            new Dictionary<string, object>
+            {
+                ["IDs"] = FanFullSpeedFeatureId,
+                ["value"] = value
+            });
     }
 
     public FirmwareFanTable? ReadCustomFanTable()

@@ -26,7 +26,7 @@ public sealed class FallbackFanController(IFanController primary, IFanController
         if (primary.IsSupported)
         {
             var result = await primary.SetFanModeAsync(mode, cancellationToken);
-            if (result.Accepted || !fallback.IsSupported || mode == FanMode.MaxCooling)
+            if (result.Accepted || !fallback.IsSupported)
                 return result;
 
             var fallbackResult = await fallback.SetFanModeAsync(mode, cancellationToken);
