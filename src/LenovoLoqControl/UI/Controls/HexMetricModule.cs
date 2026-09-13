@@ -19,6 +19,7 @@ public sealed class HexMetricModule : Grid
     private const double ProgressEpsilon = 0.004; // ~0.4% — ignore jitter between polls
     private const double ProgressAnimMinMs = 640;
     private const double ProgressAnimMaxMs = 1500;
+    private const double RpmAnimDurationMs = 220;
     private static readonly TimeSpan LabelFadeDuration = TimeSpan.FromMilliseconds(180);
     private static readonly TimeSpan AccentAnimDuration = TimeSpan.FromMilliseconds(420);
     private static readonly TimeSpan AccentAnimReduced = TimeSpan.FromMilliseconds(40);
@@ -95,6 +96,7 @@ public sealed class HexMetricModule : Grid
     private double _rpmFrom;
     private double _rpmTo;
     private bool _animatingRpm;
+    private DateTime _rpmAnimationStart;
     private DateTime _animStart;
     private double _animDurationMs = ProgressAnimMinMs;
     private IEasingFunction _activeProgressEase = ProgressEase;
@@ -684,6 +686,7 @@ public sealed class HexMetricModule : Grid
             _rpmFrom = _displayedRpm;
             _rpmTo = rpm;
             _animatingRpm = true;
+            _rpmAnimationStart = DateTime.UtcNow;
 
             // When progress is updating in the same pass, let AnimateProgress own the render loop.
             if (!allowIndependentRpmLoop)
@@ -822,6 +825,7 @@ public sealed class HexMetricModule : Grid
         _rpmFrom = _displayedRpm;
         _rpmTo = rpm;
         _animatingRpm = true;
+        _rpmAnimationStart = DateTime.UtcNow;
     }
 
     private void AnimateProgress(double targetFraction, double targetPercent)
@@ -896,9 +900,14 @@ public sealed class HexMetricModule : Grid
 
             if (_animatingRpm)
             {
-                // Allow FanRpm updates during the tween to change the endpoint smoothly.
+                // RPM should settle quickly while utilization keeps its slower,
+                // more expressive animation.
                 var rpmTarget = _rpmTo;
-                _displayedRpm = fromRpm + (rpmTarget - fromRpm) * eased;
+                var rpmT = Math.Clamp(
+                    (DateTime.UtcNow - _rpmAnimationStart).TotalMilliseconds / RpmAnimDurationMs,
+                    0, 1);
+                var rpmEased = ease.Ease(rpmT);
+                _displayedRpm = fromRpm + (rpmTarget - fromRpm) * rpmEased;
                 _fanText.Text = $"{_displayedRpm:0} RPM";
             }
 
