@@ -29,6 +29,9 @@
     <Content Include="Assets\Task.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Assets\TaskNav.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\i\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -38,5 +41,6 @@
     <None Include="Assets\GpuIsometric.lottie" />
     <None Include="Assets\RgbCircle.lottie" />
     <None Include="Assets\Task.lottie" />
+    <None Include="Assets\TaskNavPreview.png" />
   </ItemGroup>
 </Project>
