@@ -21,6 +21,19 @@
         </StackPanel>
       </Border>
 
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="About LOQ Control"/>
+          <TextBlock x:Name="VersionText"
+                     Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,8,0,0"
+                     Text="Version"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,4,0,0"
+                     Text="Native Lenovo LOQ monitoring and hardware safety controls."/>
+        </StackPanel>
+      </Border>
+
       <!-- Updates -->
       <Border Style="{StaticResource Panel.Section}">
         <StackPanel>

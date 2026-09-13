@@ -223,6 +223,9 @@
                        Text="Hardware status and live telemetry"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Style="{StaticResource Badge.Neutral}" Margin="0,0,8,0">
+              <TextBlock x:Name="HeaderVersionText" Style="{StaticResource Badge.Text}" Text="v—"/>
+            </Border>
             <Border x:Name="HeaderHealthBadge" Style="{StaticResource Badge.Neutral}" Margin="0,0,8,0">
               <TextBlock x:Name="HeaderHealthBadgeText" Style="{StaticResource Badge.Text}" Text="Health · Checking"/>
             </Border>
@@ -243,23 +246,31 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
           <TextBlock x:Name="StatusBarPrimary"
                      Style="{StaticResource Text.Caption}"
                      VerticalAlignment="Center"
                      Text="Ready"/>
           <TextBlock x:Name="StatusBarTelemetry"
-                     Grid.Column="1"
+                     Grid.Column="2"
                      Style="{StaticResource Text.Caption}"
                      VerticalAlignment="Center"
                      Margin="0,0,20,0"
                      Text="Telemetry idle"/>
           <TextBlock x:Name="StatusBarClock"
-                     Grid.Column="2"
+                     Grid.Column="3"
                      Style="{StaticResource Text.Caption}"
                      VerticalAlignment="Center"
                      FontFamily="{StaticResource Font.Mono}"
                      Text="—"/>
+          <TextBlock x:Name="StatusBarVersion"
+                     Grid.Column="0"
+                     Style="{StaticResource Text.Caption}"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Right"
+                     Margin="0,0,20,0"
+                     Text="v—"/>
         </Grid>
       </Border>
     </Grid>

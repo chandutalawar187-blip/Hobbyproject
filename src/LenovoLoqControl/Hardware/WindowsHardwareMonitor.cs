@@ -217,19 +217,39 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
 
     private static double? ReadWindowsThermalZoneTemperature()
     {
+        var acpiTemperature = ReadTemperatureQuery(
+            @"root\WMI",
+            "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+        if (acpiTemperature is not null)
+            return acpiTemperature;
+
+        return ReadTemperatureQuery(
+            @"root\CIMV2",
+            "SELECT CurrentReading FROM Win32_TemperatureProbe");
+    }
+
+    private static double? ReadTemperatureQuery(string scope, string query)
+    {
         try
         {
             using var thermalZones = new ManagementObjectSearcher(
-                @"root\WMI",
-                "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+                scope,
+                query);
             using var rows = thermalZones.Get();
             var temperatures = rows.Cast<ManagementObject>()
                 .Select(row =>
                 {
                     using (row)
                     {
-                        var raw = Convert.ToDouble(row["CurrentTemperature"] ?? 0);
-                        return raw > 0 ? (raw / 10d) - 273.15d : double.NaN;
+                        var property = row.Properties
+                            .Cast<PropertyData>()
+                            .FirstOrDefault(candidate =>
+                                string.Equals(candidate.Name, "CurrentTemperature", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(candidate.Name, "CurrentReading", StringComparison.OrdinalIgnoreCase));
+                        var raw = Convert.ToDouble(property?.Value ?? 0);
+                        return string.Equals(property?.Name, "CurrentTemperature", StringComparison.OrdinalIgnoreCase)
+                            ? raw > 0 ? (raw / 10d) - 273.15d : double.NaN
+                            : raw;
                     }
                 })
                 .Where(value => !double.IsNaN(value) && value is >= 0 and <= 125)

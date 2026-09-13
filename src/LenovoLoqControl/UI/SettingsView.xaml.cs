@@ -23,6 +23,7 @@ public partial class SettingsView : UserControl
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
+        VersionText.Text = $"Version {UpdateService.DisplayVersion}";
         FanProviderStatus.Text = _hardware.FanController.IsSupported
             ? "Provider status · Ready for firmware mode commands"
             : $"Provider status · {_hardware.FanController.AvailabilityMessage}";

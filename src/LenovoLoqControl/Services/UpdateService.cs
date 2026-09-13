@@ -23,6 +23,10 @@ public sealed class UpdateService
         Assembly.GetEntryAssembly()?.GetName().Version
         ?? new Version(1, 0, 0);
 
+    public static string DisplayVersion =>
+        Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? CurrentVersion.ToString(3);
+
     public async Task<AppUpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken)
     {
         using var response = await Client.GetAsync(
