@@ -313,7 +313,7 @@ public partial class KeyboardLightingView : UserControl
     {
         if (!_syncingDeviceState)
         {
-            if (EffectColorCycle.IsChecked == true)
+            if (EffectColorCycle.IsChecked == true && ColorPickerPopup is not null)
                 ColorPickerPopup.IsOpen = false;
             QueueRgbPreview();
         }
