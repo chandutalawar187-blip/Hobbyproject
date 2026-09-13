@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO.Compression;
 using System.IO;
 using System.Windows;
 using System.Windows.Automation;
@@ -61,6 +63,7 @@ public sealed class NavLottieIcon : Border
     private bool _hooksWired;
     private bool _assetBound;
     private bool _useGif;
+    private static readonly Dictionary<string, string?> LottiePackageCache = new(StringComparer.OrdinalIgnoreCase);
 
     public NavLottieIcon()
     {
@@ -223,6 +226,9 @@ public sealed class NavLottieIcon : Border
 
         Child = _lottie;
         var filePath = ResolveAssetPath(fileName);
+        if (fileName.EndsWith(".lottie", StringComparison.OrdinalIgnoreCase))
+            filePath = ResolveLottiePackage(filePath);
+
         if (filePath is not null)
         {
             _lottie.FileName = filePath;
@@ -235,6 +241,51 @@ public sealed class NavLottieIcon : Border
             : fileName + ".json";
         _lottie.ResourcePath = $"pack://application:,,,/LoqControl;component/Assets/{packName}";
         _assetBound = true;
+    }
+
+    private static string? ResolveLottiePackage(string? packagePath)
+    {
+        if (packagePath is null)
+            return null;
+
+        if (LottiePackageCache.TryGetValue(packagePath, out var cachedPath))
+            return cachedPath;
+
+        try
+        {
+            var cacheDirectory = Path.Combine(
+                Path.GetTempPath(),
+                "LenovoLoqControl",
+                "lottie",
+                $"{Path.GetFileNameWithoutExtension(packagePath)}-{new FileInfo(packagePath).Length}");
+            var scenePath = Path.Combine(cacheDirectory, "a", "Main Scene.json");
+
+            if (!File.Exists(scenePath))
+            {
+                Directory.CreateDirectory(cacheDirectory);
+                ZipFile.ExtractToDirectory(packagePath, cacheDirectory, overwriteFiles: true);
+            }
+
+            NormalizeLottieImagePaths(scenePath);
+            cachedPath = File.Exists(scenePath) ? scenePath : null;
+            LottiePackageCache[packagePath] = cachedPath;
+            return cachedPath;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            LottiePackageCache[packagePath] = null;
+            return null;
+        }
+    }
+
+    private static void NormalizeLottieImagePaths(string scenePath)
+    {
+        if (!File.Exists(scenePath))
+            return;
+
+        var scene = File.ReadAllText(scenePath);
+        scene = scene.Replace("\"u\":\"/i/\"", "\"u\":\"../i/\"", StringComparison.Ordinal);
+        File.WriteAllText(scenePath, scene);
     }
 
     private void BindGif(string fileName)

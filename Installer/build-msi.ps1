@@ -12,10 +12,10 @@ New-Item -ItemType Directory -Force $outputDir | Out-Null
 wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `
     -arch x64 `
     -d PublishDir=$publishDir `
-    -o (Join-Path $outputDir "LOQ-Control-1.0.0-x64.msi")
+    -o (Join-Path $outputDir "LOQ-Control-1.0.1-x64.msi")
 
 if ($LASTEXITCODE -ne 0) {
     throw "WiX failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.0.0-x64.msi')"
+Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.0.1-x64.msi')"

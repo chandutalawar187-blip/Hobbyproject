@@ -91,7 +91,13 @@
                       ToolTip="System overview and live telemetry"
                       AutomationProperties.Name="Dashboard"
                       AutomationProperties.HelpText="System overview and live telemetry">
-                <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <controls:NavLottieIcon x:Name="NavDashboardIcon"
+                                          AssetFileName="Laptop_Control_Center.lottie"
+                                          IconSize="40"
+                                          AutomationProperties.Name="Dashboard icon"/>
+                  <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" VerticalAlignment="Center"/>
+                </StackPanel>
               </Button>
 
               <Button x:Name="NavFan"
