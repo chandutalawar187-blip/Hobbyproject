@@ -374,6 +374,7 @@ public partial class KeyboardLightingView : UserControl
             RgbSpeedSlider.IsEnabled = true;
             RgbSpeedValue.Opacity = 1;
             RgbSpeedPanel.Visibility = Visibility.Visible;
+            RgbColorPanel.Visibility = Visibility.Visible;
             return;
         }
 
@@ -383,8 +384,10 @@ public partial class KeyboardLightingView : UserControl
             ? null
             : Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue);
 
-        RgbColorSwatch.Background = new SolidColorBrush(
+        RgbColorSwatchButton.Background = new SolidColorBrush(
             Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue));
+        if (ColorPickerPopup.IsOpen)
+            ColorPicker.SetColor(settings.Color, raiseEvent: false);
         RgbSpeedValue.Text = settings.Effect == KeyboardRgbEffect.Static
             ? "N/A"
             : settings.Speed.ToString("00");
@@ -393,6 +396,38 @@ public partial class KeyboardLightingView : UserControl
         RgbSpeedPanel.Visibility = settings.Effect == KeyboardRgbEffect.Static
             ? Visibility.Collapsed
             : Visibility.Visible;
+        RgbColorPanel.Visibility = settings.Effect == KeyboardRgbEffect.ColorCycle
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    private void OpenColorPickerClick(object sender, RoutedEventArgs e)
+    {
+        if (EffectColorCycle.IsChecked == true)
+            return;
+
+        if (TryParseHex(RgbColorText.Text, out var color))
+            ColorPicker.SetColor(color, raiseEvent: false);
+        else
+            ColorPicker.SetColor(Colors.White, raiseEvent: false);
+
+        ColorPickerPopup.IsOpen = true;
+    }
+
+    private void ColorPickerColorChanged(object? sender, Color color)
+    {
+        _syncingDeviceState = true;
+        try
+        {
+            RgbColorText.Text = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+            RgbColorSwatchButton.Background = new SolidColorBrush(color);
+        }
+        finally
+        {
+            _syncingDeviceState = false;
+        }
+
+        QueueRgbPreview();
     }
 
     private bool TryGetRgbSettings(out KeyboardRgbSettings settings)

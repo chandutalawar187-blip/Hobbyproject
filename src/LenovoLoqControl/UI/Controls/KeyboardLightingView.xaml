@@ -215,7 +215,7 @@
   </UserControl.Resources>
 
   <Border x:Name="RootCard" Style="{DynamicResource Card.Metric}" Margin="0,0,0,16" Padding="22,20">
-    <StackPanel>
+    <StackPanel x:Name="RgbColorPanel">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
@@ -405,13 +405,50 @@
                       <ColumnDefinition Width="10"/>
                       <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="RgbColorSwatch"
+                    <Button x:Name="RgbColorSwatchButton"
                             Width="44" Height="36"
-                            CornerRadius="2"
-                            BorderBrush="{StaticResource Rgb.HudCyanDim}"
-                            BorderThickness="1"
-                            Background="#FFFFFF"
-                            ToolTip="Active preview color"/>
+                            Cursor="Hand"
+                            Click="OpenColorPickerClick"
+                            ToolTip="Open color picker"
+                            AutomationProperties.Name="Open color picker"
+                            FocusVisualStyle="{x:Null}">
+                      <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                          <Border x:Name="SwatchChrome"
+                                  CornerRadius="2"
+                                  BorderBrush="{StaticResource Rgb.HudCyanDim}"
+                                  BorderThickness="1"
+                                  Background="{TemplateBinding Background}">
+                            <Border Width="10" Height="10"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                    Margin="0,0,4,4"
+                                    Background="#22121820"
+                                    BorderBrush="{StaticResource Rgb.HudCyan}"
+                                    BorderThickness="1"
+                                    CornerRadius="1"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                              <Setter TargetName="SwatchChrome" Property="BorderBrush" Value="{StaticResource Rgb.HudCyan}"/>
+                            </Trigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Button.Template>
+                      <Button.Background>
+                        <SolidColorBrush Color="#FFFFFF"/>
+                      </Button.Background>
+                    </Button>
+                    <Popup x:Name="ColorPickerPopup"
+                           PlacementTarget="{Binding ElementName=RgbColorSwatchButton}"
+                           Placement="Bottom"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           PopupAnimation="Fade"
+                           VerticalOffset="8"
+                           HorizontalOffset="-8">
+                      <controls:RgbColorPickerControl x:Name="ColorPicker"
+                                                      ColorChanged="ColorPickerColorChanged"/>
+                    </Popup>
                     <TextBox x:Name="RgbColorText"
                              Grid.Column="2"
                              Style="{StaticResource Rgb.Field}"
