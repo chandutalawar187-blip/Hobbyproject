@@ -102,7 +102,7 @@ public partial class SettingsView : UserControl
             UpdateStatus.Text = $"Downloading {update.InstallerName}…";
             var progress = new Progress<double>(value => UpdateProgress.Value = value);
             var installer = await _updates.DownloadInstallerAsync(update, progress, CancellationToken.None);
-            UpdateService.LaunchInstaller(installer);
+            UpdateService.LaunchInstallerAndRestart(installer);
             Application.Current.Shutdown();
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException)

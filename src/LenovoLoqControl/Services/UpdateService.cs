@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Reflection;
+using System.Text;
 
 namespace LenovoLoqControl.Services;
 
@@ -106,18 +107,36 @@ public sealed class UpdateService
         return path;
     }
 
-    public static void LaunchInstaller(string installerPath)
+    public static void LaunchInstallerAndRestart(string installerPath)
     {
         if (!File.Exists(installerPath))
             throw new FileNotFoundException("Downloaded installer was not found.", installerPath);
 
+        var applicationPath = Environment.ProcessPath
+            ?? throw new InvalidOperationException("The current application path is unavailable.");
+        var scriptPath = Path.Combine(
+            Path.GetDirectoryName(installerPath)
+                ?? throw new InvalidOperationException("The installer directory is unavailable."),
+            "apply-update.ps1");
+        var script = $"""
+            $ErrorActionPreference = "Stop"
+            Start-Process -FilePath "msiexec.exe" -ArgumentList '/i', '{EscapePowerShell(installerPath)}', '/passive', '/norestart' -Wait
+            Start-Process -FilePath '{EscapePowerShell(applicationPath)}'
+            Remove-Item -LiteralPath '{EscapePowerShell(scriptPath)}' -Force -ErrorAction SilentlyContinue
+            """;
+        File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
         Process.Start(new ProcessStartInfo
         {
-            FileName = "msiexec.exe",
-            Arguments = $"/i \"{installerPath}\" /passive",
-            UseShellExecute = true
+            FileName = "powershell.exe",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true
         });
     }
+
+    private static string EscapePowerShell(string value) =>
+        value.Replace("'", "''", StringComparison.Ordinal);
 
     private static HttpClient CreateClient()
     {
