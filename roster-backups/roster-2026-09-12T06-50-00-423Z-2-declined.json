@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-12T06:49:12.861Z",
+  "agents": [
+    {
+      "id": "god",
+      "name": "Michael",
+      "character": "michael",
+      "accent": "lemon",
+      "description": "god — runs the floor, triages requests, escalates only critical calls to you",
+      "project": "hive",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "switching to GitHub Copilot CLI…",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-god",
+      "command": "copilot --model auto -s --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "isGod": true
+    }
+  ],
+  "archived": [],
+  "restorable": [],
+  "queues": {},
+  "selectedId": "god"
+}

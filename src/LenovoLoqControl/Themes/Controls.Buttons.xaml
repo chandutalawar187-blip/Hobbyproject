@@ -1,0 +1,162 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style x:Key="FocusVisual.Default" TargetType="Control">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate>
+          <Rectangle Margin="2"
+                     StrokeThickness="2"
+                     Stroke="{DynamicResource Brush.FocusRing}"
+                     StrokeDashArray="1 2"
+                     SnapsToDevicePixels="True"
+                     RadiusX="6"
+                     RadiusY="6"/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <ControlTemplate x:Key="ButtonTemplate.Base" TargetType="Button">
+    <Border x:Name="ButtonBorder"
+            Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="{TemplateBinding BorderThickness}"
+            CornerRadius="8"
+            Padding="{TemplateBinding Padding}"
+            SnapsToDevicePixels="True"
+            RenderTransformOrigin="0.5,0.5">
+      <Border.RenderTransform>
+        <ScaleTransform ScaleX="1" ScaleY="1"/>
+      </Border.RenderTransform>
+      <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                        RecognizesAccessKey="True"/>
+    </Border>
+    <ControlTemplate.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.Hover}"/>
+      </Trigger>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.Pressed}"/>
+        <Trigger.EnterActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="ButtonBorder"
+                               Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                               To="0.97" Duration="0:0:0.08"/>
+              <DoubleAnimation Storyboard.TargetName="ButtonBorder"
+                               Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                               To="0.97" Duration="0:0:0.08"/>
+            </Storyboard>
+          </BeginStoryboard>
+        </Trigger.EnterActions>
+        <Trigger.ExitActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="ButtonBorder"
+                               Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                               To="1" Duration="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                  <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+              <DoubleAnimation Storyboard.TargetName="ButtonBorder"
+                               Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                               To="1" Duration="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                  <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+              </DoubleAnimation>
+            </Storyboard>
+          </BeginStoryboard>
+        </Trigger.ExitActions>
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45"/>
+      </Trigger>
+      <Trigger Property="IsKeyboardFocused" Value="True">
+        <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource Brush.FocusRing}"/>
+        <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2"/>
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
+  <Style TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Elevated}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="14,8"/>
+    <Setter Property="Margin" Value="0,0,8,0"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+    <Setter Property="FontFamily" Value="{DynamicResource Font.UI}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Default}"/>
+    <Setter Property="Template" Value="{StaticResource ButtonTemplate.Base}"/>
+  </Style>
+
+  <Style x:Key="Button.Primary" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="ButtonBorder"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="8"
+                  Padding="{TemplateBinding Padding}"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              RecognizesAccessKey="True"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.AccentHover}"/>
+              <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource Brush.AccentHover}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="ButtonBorder" Property="Effect" Value="{DynamicResource FocusGlow}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="Button.Ghost" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+  </Style>
+
+  <Style x:Key="Button.Danger" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Background" Value="#331B222D"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Critical}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Critical}"/>
+  </Style>
+
+  <Style x:Key="Button.Mode" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="MinWidth" Value="112"/>
+    <Setter Property="Padding" Value="16,10"/>
+    <Setter Property="Margin" Value="0,0,10,10"/>
+  </Style>
+
+  <Style x:Key="Button.ModeSelected" TargetType="Button" BasedOn="{StaticResource Button.Mode}">
+    <Setter Property="Background" Value="#33E2231A"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+</ResourceDictionary>

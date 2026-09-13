@@ -1,0 +1,36 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <DropShadowEffect x:Key="CardShadow"
+                    BlurRadius="20"
+                    ShadowDepth="4"
+                    Direction="270"
+                    Opacity="0.28"
+                    Color="#000000"/>
+
+  <DropShadowEffect x:Key="ElevatedShadow"
+                    BlurRadius="28"
+                    ShadowDepth="8"
+                    Direction="270"
+                    Opacity="0.32"
+                    Color="#000000"/>
+
+  <DropShadowEffect x:Key="SoftGlowAccent"
+                    BlurRadius="16"
+                    ShadowDepth="0"
+                    Opacity="0.35"
+                    Color="#E2231A"/>
+
+  <DropShadowEffect x:Key="SoftGlowSuccess"
+                    BlurRadius="14"
+                    ShadowDepth="0"
+                    Opacity="0.30"
+                    Color="#47D18C"/>
+
+  <DropShadowEffect x:Key="FocusGlow"
+                    BlurRadius="8"
+                    ShadowDepth="0"
+                    Opacity="0.55"
+                    Color="#62A8FF"/>
+
+</ResourceDictionary>

@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-12T07:20:46.959Z",
+  "agents": [
+    {
+      "id": "god",
+      "name": "Michael",
+      "character": "michael",
+      "accent": "lemon",
+      "description": "god — runs the floor, triages requests, escalates only critical calls to you",
+      "project": "hive",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "idle",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-god",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "isGod": true
+    },
+    {
+      "id": "jim-mty178k3",
+      "name": "Jim",
+      "character": "jim",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-jim-mty178k3",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto"
+    },
+    {
+      "id": "pam-mty1chzt",
+      "name": "Pam",
+      "character": "pam",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-pam-mty1chzt",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "lastPrompt": "• A real Lenovo LOQ test procedure is documented."
+    },
+    {
+      "id": "dwight-mty1geij",
+      "name": "Dwight",
+      "character": "dwight",
+      "accent": "sky",
+      "description": "keeps docs in sync with the code",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "goal": "Watch for code changes that outdate the README and docs, then update them. Write for newcomers and prefer concrete examples over prose.",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-dwight-mty1geij",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto"
+    },
+    {
+      "id": "kevin-mty1hlwl",
+      "name": "Kevin",
+      "character": "kevin",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-kevin-mty1hlwl",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "lastPrompt": "• The application never claims direct fan control unless direct fan control is genuinely verified"
+    },
+    {
+      "id": "angela-mty1mh7f",
+      "name": "Angela",
+      "character": "angela",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "goal": "you are a QA tester and application manager. You will launch the application once the applicatoin is build and test it.\nto know that the application is built, communicate with team members",
+      "status": "working",
+      "action": "completed the bounded Windows power-mode QA and reported it to god .",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-angela-mty1mh7f",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto"
+    }
+  ],
+  "archived": [],
+  "restorable": [],
+  "queues": {
+    "jim-mty178k3": [
+      {
+        "id": "q-1789197646454-48",
+        "text": "You have new hive inbox message(s) — at least: 2026-09-12T07-20-42-800Z-810e2e. Read your inbox, act on what is pending there, and move handled ones to inbox/.done/. Your inbox directory is authoritative: work everything still pending in it, and if a named id is already in inbox/.done/ you handled it on an earlier turn and can ignore that one. Act autonomously; only message god if you genuinely need a decision.",
+        "ts": 1789197646454,
+        "precondition": "inbox-nonempty"
+      }
+    ],
+    "kevin-mty1hlwl": [
+      {
+        "id": "q-1789197646463-49",
+        "text": "You have new hive inbox message(s) — at least: 2026-09-12T07-20-42-806Z-2dd3ba. Read your inbox, act on what is pending there, and move handled ones to inbox/.done/. Your inbox directory is authoritative: work everything still pending in it, and if a named id is already in inbox/.done/ you handled it on an earlier turn and can ignore that one. Act autonomously; only message god if you genuinely need a decision.",
+        "ts": 1789197646463,
+        "precondition": "inbox-nonempty"
+      }
+    ]
+  },
+  "selectedId": "god"
+}

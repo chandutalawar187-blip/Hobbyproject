@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style x:Key="Shell.Header" TargetType="Border">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="8,4,8,16"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    <Setter Property="Margin" Value="0,0,0,8"/>
+  </Style>
+
+  <Style x:Key="Shell.StatusBar" TargetType="Border">
+    <Setter Property="Background" Value="#0C1016"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}"/>
+    <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    <Setter Property="Padding" Value="20,8"/>
+    <Setter Property="MinHeight" Value="36"/>
+  </Style>
+
+  <Style x:Key="Shell.ContentHost" TargetType="Border">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="28,16,32,12"/>
+  </Style>
+
+  <Style x:Key="Shell.IdentityCard" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource Brush.Card}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Padding" Value="14"/>
+    <Setter Property="Margin" Value="0,0,0,20"/>
+  </Style>
+
+  <Style x:Key="Shell.HealthCard" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource Brush.Elevated}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Padding" Value="14"/>
+    <Setter Property="Margin" Value="0,16,0,0"/>
+  </Style>
+
+</ResourceDictionary>

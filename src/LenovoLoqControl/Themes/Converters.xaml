@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:LenovoLoqControl.UI.Converters">
+
+  <converters:NullToUnavailableConverter x:Key="NullToUnavailableConverter"/>
+  <converters:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter"/>
+  <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+  <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+  <converters:ThermalStateToBrushConverter x:Key="ThermalStateToBrushConverter"/>
+  <converters:AcceptedToBrushConverter x:Key="AcceptedToBrushConverter"/>
+  <converters:BoolToAvailabilityTextConverter x:Key="BoolToAvailabilityTextConverter"/>
+
+</ResourceDictionary>

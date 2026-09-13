@@ -1,0 +1,98 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <!-- Timing tokens (seconds). Consumers should skip animations when ReducedMotion is true. -->
+  <Duration x:Key="Duration.Instant">0:0:0.01</Duration>
+  <Duration x:Key="Duration.Fast">0:0:0.12</Duration>
+  <Duration x:Key="Duration.Normal">0:0:0.22</Duration>
+  <Duration x:Key="Duration.Slow">0:0:0.36</Duration>
+  <Duration x:Key="Duration.Page">0:0:0.28</Duration>
+
+  <sys:Boolean x:Key="Motion.ReducedMotionDefault">False</sys:Boolean>
+
+  <CubicEase x:Key="Ease.Standard" EasingMode="EaseInOut"/>
+  <CubicEase x:Key="Ease.Decelerate" EasingMode="EaseOut"/>
+  <CubicEase x:Key="Ease.Accelerate" EasingMode="EaseIn"/>
+  <QuadraticEase x:Key="Ease.Soft" EasingMode="EaseOut"/>
+  <CircleEase x:Key="Ease.CircleOut" EasingMode="EaseOut"/>
+
+  <!-- Page enter: fade + slight rise -->
+  <Storyboard x:Key="Storyboard.PageEnter">
+    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="0" To="1"
+                     Duration="{StaticResource Duration.Page}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+    <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                        From="0,12,0,0" To="0,0,0,0"
+                        Duration="{StaticResource Duration.Page}">
+      <ThicknessAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </ThicknessAnimation.EasingFunction>
+    </ThicknessAnimation>
+  </Storyboard>
+
+  <!-- Page enter alternative: fade only (for reduced-motion consumers) -->
+  <Storyboard x:Key="Storyboard.PageEnterFade">
+    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="0" To="1"
+                     Duration="{StaticResource Duration.Fast}"/>
+  </Storyboard>
+
+  <!-- Card stagger entrance helper (apply to Opacity) -->
+  <Storyboard x:Key="Storyboard.CardEnter">
+    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="0" To="1"
+                     Duration="{StaticResource Duration.Normal}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+  </Storyboard>
+
+  <!-- Subtle scale pop for mode selection -->
+  <Storyboard x:Key="Storyboard.SelectionPulse">
+    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                     From="0.96" To="1"
+                     Duration="{StaticResource Duration.Fast}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                     From="0.96" To="1"
+                     Duration="{StaticResource Duration.Fast}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+  </Storyboard>
+
+  <!-- Toast slide + fade -->
+  <Storyboard x:Key="Storyboard.ToastIn">
+    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="0" To="1"
+                     Duration="{StaticResource Duration.Normal}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                     From="16" To="0"
+                     Duration="{StaticResource Duration.Normal}">
+      <DoubleAnimation.EasingFunction>
+        <CubicEase EasingMode="EaseOut"/>
+      </DoubleAnimation.EasingFunction>
+    </DoubleAnimation>
+  </Storyboard>
+
+  <Storyboard x:Key="Storyboard.ToastOut">
+    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="1" To="0"
+                     Duration="{StaticResource Duration.Fast}"/>
+  </Storyboard>
+
+</ResourceDictionary>

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-12T06:59:13.899Z",
+  "agents": [
+    {
+      "id": "god",
+      "name": "Michael",
+      "character": "michael",
+      "accent": "lemon",
+      "description": "god — runs the floor, triages requests, escalates only critical calls to you",
+      "project": "hive",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-god",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "isGod": true
+    },
+    {
+      "id": "jim-mty178k3",
+      "name": "Jim",
+      "character": "jim",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "working",
+      "action": "working · 1.3 KiB esc interrupt Auto → gpt-5.6-luna",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-jim-mty178k3",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto"
+    }
+  ],
+  "archived": [],
+  "restorable": [],
+  "queues": {},
+  "selectedId": "god"
+}

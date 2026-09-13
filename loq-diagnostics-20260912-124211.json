@@ -1,0 +1,14 @@
+{
+  "exportedAt": "2026-09-12T12:42:23.4081115+05:30",
+  "application": "LOQ Control Center",
+  "status": "Diagnostics exported.",
+  "lastUpdated": "Updated 12-Sep-26 12:41:18",
+  "system": {
+    "Model": "83DV",
+    "Bios": "BIOS NECN53WW",
+    "Battery": "Battery 41% (status 1)"
+  },
+  "sensors": {
+    "Summary": "Windows does not expose CPU/GPU temperature or fan RPM through a stable built-in CIM contract. Hardware-specific control is unavailable."
+  }
+}

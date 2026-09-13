@@ -1,0 +1,21 @@
+<UserControl x:Class="LenovoLoqControl.UI.DiagnosticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:LenovoLoqControl.UI">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+    <StackPanel ui:UiAnimation.StaggerChildrenOnLoad="True">
+      <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,0,0,16"
+                 Text="Compatibility is reported per capability. Nothing is marked available without a real reading or an accepted command path."/>
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel x:Name="CapabilityList"/>
+      </Border>
+      <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
+        <Button Content="Export diagnostic report" Style="{StaticResource Button.Primary}" Click="ExportClick" Margin="0,0,10,0"/>
+        <Button Content="Copy technical details" Click="CopyClick" Margin="0"/>
+      </StackPanel>
+      <TextBlock x:Name="ExportStatus" Style="{StaticResource Text.Caption}" Text=""/>
+      <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,16,0,0"
+                 Text="Unsupported hardware is shown with an amber warning. Red is reserved for real failures while collecting diagnostics."/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

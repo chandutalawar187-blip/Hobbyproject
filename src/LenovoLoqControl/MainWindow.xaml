@@ -1,0 +1,185 @@
+<Window x:Class="LenovoLoqControl.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:LenovoLoqControl.UI.Shell"
+        Title="LOQ Control"
+        Width="1280" Height="800"
+        MinWidth="960" MinHeight="640"
+        Background="{StaticResource Brush.BackgroundGradient}"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        SizeChanged="WindowSizeChanged">
+  <Grid x:Name="ShellRoot">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition x:Name="NavColumn" Width="248" MinWidth="200" MaxWidth="300"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- Navigation rail -->
+    <Border x:Name="NavRail" Grid.Column="0" Style="{StaticResource Navigation.Rail}">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Brand -->
+        <StackPanel Grid.Row="0" Margin="4,0,4,8">
+          <TextBlock Style="{StaticResource Navigation.BrandLabel}" Text="LOQ"/>
+          <TextBlock Style="{StaticResource Navigation.BrandSubLabel}" Text="CONTROL CENTER"/>
+        </StackPanel>
+
+        <!-- Identity -->
+        <Border Grid.Row="1" Style="{StaticResource Shell.IdentityCard}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM"/>
+            <TextBlock x:Name="ModelNameText"
+                       Text="Reading model…"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       Margin="0,6,0,2"/>
+            <TextBlock x:Name="MachineTypeText"
+                       Style="{StaticResource Text.BodySecondary}"
+                       FontSize="12"
+                       Text="Machine type unavailable"/>
+            <Border Style="{StaticResource Badge.Mode}" Margin="0,12,0,0">
+              <TextBlock x:Name="PerformanceModeBadge"
+                         Style="{StaticResource Badge.Text}"
+                         Text="Mode not reported"/>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <!-- Nav buttons -->
+        <StackPanel Grid.Row="2" Margin="0,4,0,0">
+          <Button x:Name="NavDashboard"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Dashboard"
+                  Tag="Selected"
+                  Click="DashboardClick"
+                  ToolTip="System overview and live telemetry"
+                  AutomationProperties.Name="Dashboard"
+                  AutomationProperties.HelpText="System overview and live telemetry"/>
+          <Button x:Name="NavFan"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Fan Control"
+                  Click="FanClick"
+                  ToolTip="Firmware fan modes, fixed speed, and curves"
+                  AutomationProperties.Name="Fan Control"/>
+          <Button x:Name="NavProfiles"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Profiles"
+                  Click="ProfilesClick"
+                  ToolTip="Quiet, Balanced, Performance, and Custom intents"
+                  AutomationProperties.Name="Profiles"/>
+          <Button x:Name="NavDiagnostics"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Diagnostics"
+                  Click="DiagnosticsClick"
+                  ToolTip="Compatibility and capability report"
+                  AutomationProperties.Name="Diagnostics"/>
+          <Button x:Name="NavSettings"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Settings"
+                  Click="SettingsClick"
+                  ToolTip="Preferences and Lenovo integration"
+                  AutomationProperties.Name="Settings"/>
+        </StackPanel>
+
+        <!-- Health card -->
+        <Border Grid.Row="3" Style="{StaticResource Shell.HealthCard}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM HEALTH"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+              <Ellipse x:Name="HealthDot"
+                       Style="{StaticResource Status.Dot}"
+                       Fill="{StaticResource Brush.TextSecondary}"/>
+              <TextBlock x:Name="HealthStatusText"
+                         Text="Checking…"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock x:Name="HardwareStatus"
+                       Style="{StaticResource Text.BodySecondary}"
+                       FontSize="12"
+                       Margin="0,8,0,0"
+                       Text="Checking hardware provider…"/>
+            <TextBlock Style="{StaticResource Text.BodySecondary}"
+                       FontSize="11"
+                       Margin="0,6,0,0"
+                       Text="No unsafe hardware writes."/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <!-- Main column -->
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="0" Style="{StaticResource Shell.Header}" Margin="28,22,32,0">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock x:Name="PageTitleText"
+                       Style="{StaticResource Text.Headline}"
+                       Text="Dashboard"/>
+            <TextBlock x:Name="PageSubtitleText"
+                       Style="{StaticResource Text.BodySecondary}"
+                       Margin="0,4,0,0"
+                       Text="Hardware status and live telemetry"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Border x:Name="HeaderHealthBadge" Style="{StaticResource Badge.Neutral}" Margin="0,0,8,0">
+              <TextBlock x:Name="HeaderHealthBadgeText" Style="{StaticResource Badge.Text}" Text="Health · Checking"/>
+            </Border>
+            <Border Style="{StaticResource Badge.Info}">
+              <TextBlock x:Name="ProviderBadgeText" Style="{StaticResource Badge.Text}" Text="Provider · …"/>
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="1" Style="{StaticResource Shell.ContentHost}" x:Name="ContentHostBorder">
+        <shell:PageTransitionHost x:Name="ContentHost"/>
+      </Border>
+
+      <Border Grid.Row="2" Style="{StaticResource Shell.StatusBar}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock x:Name="StatusBarPrimary"
+                     Style="{StaticResource Text.Caption}"
+                     VerticalAlignment="Center"
+                     Text="Ready"/>
+          <TextBlock x:Name="StatusBarTelemetry"
+                     Grid.Column="1"
+                     Style="{StaticResource Text.Caption}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,20,0"
+                     Text="Telemetry idle"/>
+          <TextBlock x:Name="StatusBarClock"
+                     Grid.Column="2"
+                     Style="{StaticResource Text.Caption}"
+                     VerticalAlignment="Center"
+                     FontFamily="{StaticResource Font.Mono}"
+                     Text="—"/>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

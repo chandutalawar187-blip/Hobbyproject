@@ -1,0 +1,10 @@
+{
+  "mempalace_drawers": {
+    "model_name": "minilm",
+    "dimension": 0
+  },
+  "mempalace_closets": {
+    "model_name": "minilm",
+    "dimension": 0
+  }
+}

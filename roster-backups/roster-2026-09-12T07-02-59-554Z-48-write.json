@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-12T07:02:58.958Z",
+  "agents": [
+    {
+      "id": "god",
+      "name": "Michael",
+      "character": "michael",
+      "accent": "lemon",
+      "description": "god — runs the floor, triages requests, escalates only critical calls to you",
+      "project": "hive",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-god",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "isGod": true
+    },
+    {
+      "id": "jim-mty178k3",
+      "name": "Jim",
+      "character": "jim",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "idle",
+      "action": "awaiting",
+      "progress": 0,
+      "currentStation": "desk",
+      "ptyId": "pty-jim-mty178k3",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto"
+    },
+    {
+      "id": "pam-mty1chzt",
+      "name": "Pam",
+      "character": "pam",
+      "accent": "sky",
+      "description": "a fresh harness",
+      "project": "C:\\Users\\chand\\fan",
+      "tmuxTarget": "",
+      "cwd": "C:\\Users\\chand\\fan",
+      "status": "working",
+      "action": "read App.xaml L1:240 (8 lines read) ┃",
+      "progress": 0,
+      "currentStation": "shelf",
+      "ptyId": "pty-pam-mty1chzt",
+      "command": "copilot --model auto --allow-all-tools --no-ask-user",
+      "provider": "copilot",
+      "model": "auto",
+      "carrying": "Read",
+      "lastPrompt": "• A real Lenovo LOQ test procedure is documented."
+    }
+  ],
+  "archived": [],
+  "restorable": [],
+  "queues": {
+    "god": [
+      {
+        "id": "q-1789196578450-14",
+        "text": "You have new hive inbox message(s) — at least: 2026-09-12T07-02-56-330Z-e1153b. Read your inbox, act on what is pending there, and move handled ones to inbox/.done/. Your inbox directory is authoritative: work everything still pending in it, and if a named id is already in inbox/.done/ you handled it on an earlier turn and can ignore that one. Act autonomously; only message god if you genuinely need a decision.",
+        "ts": 1789196578450,
+        "precondition": "inbox-nonempty"
+      }
+    ],
+    "jim-mty178k3": [
+      {
+        "id": "q-1789196578470-15",
+        "text": "You have new hive inbox message(s) — at least: 2026-09-12T07-02-56-327Z-ca8eba. Read your inbox, act on what is pending there, and move handled ones to inbox/.done/. Your inbox directory is authoritative: work everything still pending in it, and if a named id is already in inbox/.done/ you handled it on an earlier turn and can ignore that one. Act autonomously; only message god if you genuinely need a decision.",
+        "ts": 1789196578470,
+        "precondition": "inbox-nonempty"
+      }
+    ]
+  },
+  "selectedId": "god"
+}

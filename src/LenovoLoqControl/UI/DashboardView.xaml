@@ -1,0 +1,154 @@
+<UserControl x:Class="LenovoLoqControl.UI.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
+             xmlns:ui="clr-namespace:LenovoLoqControl.UI">
+  <UserControl.Resources>
+    <Style x:Key="Dash.MetricLabel" TargetType="TextBlock" BasedOn="{StaticResource Text.Caption}">
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style x:Key="Dash.MetricValue" TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="Dash.MetricMuted" TargetType="TextBlock" BasedOn="{StaticResource Text.BodySecondary}">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                Padding="0,0,8,0">
+    <StackPanel ui:UiAnimation.StaggerChildrenOnLoad="True">
+      <!-- Top overview -->
+      <Border Style="{StaticResource Panel.Section}" Padding="22">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock Style="{StaticResource Text.Caption}" Text="LOQ CONTROL CENTER"/>
+            <TextBlock x:Name="OverviewModelText"
+                       Style="{StaticResource Text.Title}"
+                       Margin="0,8,0,4"
+                       Text="—"/>
+            <TextBlock x:Name="OverviewProviderText"
+                       Style="{StaticResource Text.BodySecondary}"
+                       Text="Provider status loading…"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+            <Border x:Name="OverviewHealthBadge" Style="{StaticResource Badge.Neutral}" Margin="0,0,0,8" HorizontalAlignment="Right">
+              <TextBlock x:Name="OverviewHealthText" Style="{StaticResource Badge.Text}" Text="Health · Loading"/>
+            </Border>
+            <Border Style="{StaticResource Badge.Mode}" HorizontalAlignment="Right">
+              <TextBlock x:Name="OverviewModeText" Style="{StaticResource Badge.Text}" Text="Mode not reported"/>
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Primary cards -->
+      <UniformGrid Columns="3" Margin="0,4,0,8">
+        <!-- CPU -->
+        <Border Style="{StaticResource Card.Metric}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="CPU"/>
+              <TextBlock x:Name="CpuTempText" Style="{StaticResource Text.Metric}" Text="—"/>
+              <TextBlock x:Name="CpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="Utilization · Loading"/>
+              <TextBlock x:Name="CpuClockText" Style="{StaticResource Dash.MetricMuted}" Text="Clock · Loading"/>
+              <TextBlock x:Name="CpuThermalText" Style="{StaticResource Dash.MetricMuted}" Text="Thermal · Loading"/>
+            </StackPanel>
+            <controls:TemperatureRing x:Name="CpuRing" Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          </Grid>
+        </Border>
+
+        <!-- GPU -->
+        <Border Style="{StaticResource Card.Metric}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="GPU"/>
+              <TextBlock x:Name="GpuTempText" Style="{StaticResource Text.Metric}" Text="—"/>
+              <TextBlock x:Name="GpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="Utilization · Loading"/>
+              <TextBlock x:Name="GpuClockText" Style="{StaticResource Dash.MetricMuted}" Text="Clock · Loading"/>
+              <TextBlock x:Name="GpuThermalText" Style="{StaticResource Dash.MetricMuted}" Text="Thermal · Loading"/>
+            </StackPanel>
+            <controls:TemperatureRing x:Name="GpuRing" Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          </Grid>
+        </Border>
+
+        <!-- Cooling -->
+        <Border Style="{StaticResource Card.Metric}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="COOLING"/>
+            <TextBlock x:Name="CoolingHeadline" Style="{StaticResource Text.Metric}" FontSize="28" Text="—"/>
+            <TextBlock x:Name="CpuFanText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="CPU fan · Loading"/>
+            <TextBlock x:Name="GpuFanText" Style="{StaticResource Dash.MetricMuted}" Text="GPU fan · Loading"/>
+            <TextBlock x:Name="FanModeText" Style="{StaticResource Dash.MetricMuted}" Text="Fan mode · Loading"/>
+            <TextBlock x:Name="FanAvailabilityText" Style="{StaticResource Dash.MetricMuted}" Text="Control · Loading"/>
+          </StackPanel>
+        </Border>
+      </UniformGrid>
+
+      <!-- Secondary cards -->
+      <UniformGrid Columns="3" Margin="0,0,0,8">
+        <Border Style="{StaticResource Card.Compact}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="MEMORY"/>
+            <TextBlock x:Name="MemoryText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
+            <TextBlock Style="{StaticResource Dash.MetricMuted}" Text="Physical memory in use"/>
+          </StackPanel>
+        </Border>
+        <Border Style="{StaticResource Card.Compact}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="BATTERY"/>
+            <TextBlock x:Name="BatteryText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
+            <TextBlock x:Name="ChargingText" Style="{StaticResource Dash.MetricMuted}" Text="Charge state · Loading"/>
+          </StackPanel>
+        </Border>
+        <Border Style="{StaticResource Card.Compact}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="POWER"/>
+            <TextBlock x:Name="PowerText" Style="{StaticResource Text.Subtitle}" Text="Unavailable"/>
+            <TextBlock Style="{StaticResource Dash.MetricMuted}" Text="CPU/GPU power is not exposed by the current provider"/>
+          </StackPanel>
+        </Border>
+      </UniformGrid>
+
+      <UniformGrid Columns="2" Margin="0,0,0,8">
+        <Border Style="{StaticResource Card.Compact}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="PROVIDER STATUS"/>
+            <TextBlock x:Name="ProviderStatusText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
+            <TextBlock x:Name="ProviderDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"/>
+          </StackPanel>
+        </Border>
+        <Border Style="{StaticResource Card.Compact}">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="LENOVO INTEGRATION"/>
+            <TextBlock x:Name="IntegrationText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
+            <TextBlock x:Name="IntegrationDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"/>
+          </StackPanel>
+        </Border>
+      </UniformGrid>
+
+      <TextBlock x:Name="LastUpdatedText"
+                 Style="{StaticResource Text.Caption}"
+                 Margin="4,4,0,8"
+                 Text="Waiting for first reading…"/>
+
+      <TextBlock Style="{StaticResource Text.BodySecondary}"
+                 Margin="4,0,0,12"
+                 Text="Lenovo firmware remains the ultimate thermal authority. Values appear only when the provider returns them — unavailable sensors are never replaced with estimates."/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

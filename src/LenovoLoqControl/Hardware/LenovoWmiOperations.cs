@@ -1,0 +1,132 @@
+using System.Management;
+using System.Runtime.InteropServices;
+using LenovoLoqControl.Core;
+
+namespace LenovoLoqControl.Hardware;
+
+internal sealed class LenovoWmiOperations : ILenovoWmiOperations
+{
+    private const string Scope = @"root\WMI";
+    private const string GameZoneQuery = "SELECT * FROM LENOVO_GAMEZONE_DATA";
+    private const uint FanFullSpeedFeatureId = 0x04020000;
+
+    public bool IsSmartFanSupported { get; }
+
+    public LenovoWmiOperations()
+    {
+        IsSmartFanSupported = Probe();
+    }
+
+    public void SetSmartFanMode(uint mode)
+    {
+        // Lenovo's GameZone provider uses the ordinal power-mode values on
+        // this four-state LOQ firmware: 1=Silent, 2=Auto, 3=Performance.
+        // 255 is reserved for the verified custom fan-table path.
+        if (mode is not (1u or 2u or 3u or 255u))
+            throw new ArgumentOutOfRangeException(nameof(mode), "The firmware mode is not in the verified Lenovo allowlist.");
+
+        InvokeMethod(GameZoneQuery, "SetSmartFanMode",
+            new Dictionary<string, object> { ["Data"] = mode });
+    }
+
+    public uint? GetSmartFanMode()
+    {
+        try
+        {
+            var result = InvokeMethod(GameZoneQuery, "GetSmartFanMode",
+                new Dictionary<string, object>());
+            var mode = ReadInt32(result, "Data");
+            return mode is >= 1 and <= 3 or 255 ? (uint)mode : null;
+        }
+        catch (Exception ex) when (ex is ManagementException or InvalidOperationException
+            or InvalidCastException or FormatException or UnauthorizedAccessException
+            or COMException)
+        {
+            return null;
+        }
+    }
+
+    public void SetFullSpeed(bool enabled)
+    {
+        var value = enabled ? 1 : 0;
+
+        InvokeMethod("SELECT * FROM LENOVO_OTHER_METHOD", "SetFeatureValue",
+            new Dictionary<string, object> { ["IDs"] = FanFullSpeedFeatureId, ["value"] = value });
+    }
+
+    public FirmwareFanTable? ReadCustomFanTable()
+    {
+        using var searcher = new ManagementObjectSearcher(Scope,
+            "SELECT SensorTable_Data, FanTable_Data FROM LENOVO_FAN_TABLE_DATA " +
+            "WHERE Active = True AND Mode = 255 AND Fan_Id = 1 AND Sensor_ID = 4");
+        using var rows = searcher.Get();
+        using var row = rows.Cast<ManagementObject>().FirstOrDefault()
+            ?? throw new InvalidOperationException("Custom fan table is unavailable.");
+        if (row["SensorTable_Data"] is not Array temperatureData ||
+            row["FanTable_Data"] is not Array fanData)
+            throw new InvalidOperationException("The Lenovo fan table returned invalid data.");
+
+        var temperatures = temperatureData.Cast<object>().Select(Convert.ToInt32).ToArray();
+        var speeds = fanData.Cast<object>().Select(Convert.ToInt32).ToArray();
+        if (temperatures.Length != 10 || speeds.Length != 10)
+            throw new InvalidOperationException("The Lenovo fan table has an unsupported shape.");
+        return new FirmwareFanTable(temperatures, speeds, [1, 1, 1, 1, 1, 1, 1, 1, 3, 5]);
+    }
+
+    public void SetFanTable(IReadOnlyList<int> steps)
+    {
+        if (steps.Count != 10 || steps.Any(step => step is < 0 or > 10))
+            throw new ArgumentOutOfRangeException(nameof(steps), "A Lenovo fan table must contain ten steps from 0 through 10.");
+
+        var bytes = new List<byte>(64) { 1, 0, 0, 0, 0, 0 };
+        foreach (var step in steps)
+            bytes.AddRange(BitConverter.GetBytes((ushort)step));
+        while (bytes.Count < 64)
+            bytes.Add(0);
+
+        InvokeMethod("SELECT * FROM LENOVO_FAN_METHOD", "Fan_Set_Table",
+            new Dictionary<string, object> { ["FanTable"] = bytes.ToArray() });
+    }
+
+    private static bool Probe()
+    {
+        try
+        {
+            var result = InvokeMethod(GameZoneQuery, "IsSupportSmartFan",
+                new Dictionary<string, object>());
+            return ReadInt32(result, "Data") > 0;
+        }
+        catch (Exception ex) when (ex is ManagementException or InvalidOperationException
+            or InvalidCastException or FormatException
+            or UnauthorizedAccessException or System.Runtime.InteropServices.COMException
+            or PlatformNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static int ReadInt32(PropertyDataCollection? properties, string name)
+    {
+        var value = properties?[name]?.Value;
+        while (value is PropertyData property)
+            value = property.Value;
+        return value is null ? 0 : Convert.ToInt32(value);
+    }
+
+    private static PropertyDataCollection? InvokeMethod(string query, string methodName,
+        Dictionary<string, object> parameters)
+    {
+        using var searcher = new ManagementObjectSearcher(Scope, query);
+        using var objects = searcher.Get();
+        using var managementObject = objects.Cast<ManagementObject>().FirstOrDefault()
+            ?? throw new InvalidOperationException($"No WMI object found for {query}.");
+        using var methodParameters = managementObject.GetMethodParameters(methodName);
+        foreach (var parameter in parameters)
+            methodParameters[parameter.Key] = parameter.Value;
+        return managementObject.InvokeMethod(methodName, methodParameters, new InvokeMethodOptions())?.Properties;
+    }
+
+    public void Dispose()
+    {
+    }
+}

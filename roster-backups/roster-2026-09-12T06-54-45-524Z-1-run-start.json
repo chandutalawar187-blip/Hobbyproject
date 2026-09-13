@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-12T06:53:54.445Z",
+  "agents": [],
+  "archived": [],
+  "restorable": [],
+  "queues": {
+    "god": [
+      {
+        "id": "q-1789195850505-2",
+        "text": "hi",
+        "ts": 1789195850505
+      }
+    ]
+  },
+  "selectedId": null
+}

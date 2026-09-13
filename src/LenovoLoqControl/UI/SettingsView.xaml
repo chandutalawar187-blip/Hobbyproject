@@ -1,0 +1,111 @@
+<UserControl x:Class="LenovoLoqControl.UI.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:LenovoLoqControl.UI">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+    <StackPanel ui:UiAnimation.StaggerChildrenOnLoad="True">
+      <!-- General -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="General"/>
+          <CheckBox x:Name="StartWithWindows" Content="Start with Windows"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Launch when you sign in. Preference is stored locally."/>
+          <CheckBox x:Name="StartMinimized" Content="Start minimized"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Open quietly without stealing focus."/>
+          <CheckBox x:Name="RememberProfile" Content="Remember last profile"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Restore the last successfully applied application profile on launch."/>
+          <CheckBox x:Name="NotificationsEnabled" Content="Notifications" IsChecked="True"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Show accept/reject toasts for firmware commands when enabled."/>
+          <CheckBox x:Name="ReducedMotion" Content="Reduced motion"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,0" Text="Disable telemetry easing, page transitions, and decorative motion."/>
+        </StackPanel>
+      </Border>
+
+      <!-- Monitoring -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Monitoring"/>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,12,0,6" Text="SENSOR REFRESH RATE"/>
+          <ComboBox x:Name="SensorRefresh" Width="220" HorizontalAlignment="Left">
+            <ComboBoxItem Content="1 second" Tag="1" IsSelected="True"/>
+            <ComboBoxItem Content="2 seconds" Tag="2"/>
+            <ComboBoxItem Content="3 seconds" Tag="3"/>
+            <ComboBoxItem Content="5 seconds" Tag="5"/>
+          </ComboBox>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,14,0,6" Text="GRAPH / RING REFRESH"/>
+          <ComboBox x:Name="GraphRefresh" Width="220" HorizontalAlignment="Left">
+            <ComboBoxItem Content="Match sensors" Tag="0" IsSelected="True"/>
+            <ComboBoxItem Content="1 second" Tag="1"/>
+            <ComboBoxItem Content="2 seconds" Tag="2"/>
+          </ComboBox>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,14,0,6" Text="TEMPERATURE UNITS"/>
+          <ComboBox x:Name="TempUnits" Width="220" HorizontalAlignment="Left">
+            <ComboBoxItem Content="Celsius (°C)" IsSelected="True"/>
+            <ComboBoxItem Content="Fahrenheit (°F)"/>
+          </ComboBox>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,12,0,0"
+                     Text="Unavailable sensors are never replaced with estimates. Disabling a field only hides it in the UI."/>
+          <CheckBox x:Name="ShowCpuTemp" Content="Show CPU temperature" IsChecked="True"/>
+          <CheckBox x:Name="ShowGpuTemp" Content="Show GPU temperature" IsChecked="True"/>
+          <CheckBox x:Name="ShowFanRpm" Content="Show fan RPM" IsChecked="True"/>
+          <CheckBox x:Name="ShowUtilization" Content="Show utilization" IsChecked="True"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Fan control prefs -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Fan control"/>
+          <TextBlock x:Name="FanProviderStatus" Style="{StaticResource Text.BodySecondary}" Margin="0,10,0,8" TextWrapping="Wrap"/>
+          <TextBlock x:Name="CurveAvailability" Style="{StaticResource Text.BodySecondary}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,0,0,6" Text="SAFE FALLBACK PROFILE"/>
+          <ComboBox x:Name="SafeFallback" Width="220" HorizontalAlignment="Left">
+            <ComboBoxItem Content="Automatic" IsSelected="True"/>
+            <ComboBoxItem Content="Silent"/>
+          </ComboBox>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,14,0,6" Text="DEFAULT PROFILE"/>
+          <ComboBox x:Name="DefaultProfile" Width="220" HorizontalAlignment="Left">
+            <ComboBoxItem Content="Balanced" IsSelected="True"/>
+            <ComboBoxItem Content="Quiet"/>
+            <ComboBoxItem Content="Performance"/>
+            <ComboBoxItem Content="Last applied"/>
+          </ComboBox>
+        </StackPanel>
+      </Border>
+
+      <!-- Lenovo integration -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Lenovo integration"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,8,0,10" TextWrapping="Wrap"
+                     Text="Lenovo Vantage and ImController can hold Lenovo's fan-table interface. Disabling this integration stops both services, disables Lenovo scheduled tasks, and closes related processes. Lenovo Vantage features, hotkeys, and related integrations may stop working until re-enabled."/>
+          <Border Style="{StaticResource Badge.Warning}" Margin="0,0,0,12" Padding="12,8">
+            <TextBlock Style="{StaticResource Badge.Text}" TextWrapping="Wrap"
+                       Text="Warning: service changes can affect Lenovo Vantage and hotkeys. Confirm before disabling."/>
+          </Border>
+          <TextBlock x:Name="ImStatus" Style="{StaticResource Text.BodySecondary}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+          <StackPanel Orientation="Horizontal">
+            <Button x:Name="DisableIm" Content="Disable integration" Style="{StaticResource Button.Danger}" Click="DisableImClick"/>
+            <Button x:Name="EnableIm" Content="Re-enable integration" Click="EnableImClick"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Advanced -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Advanced"/>
+          <CheckBox x:Name="EnableLogging" Content="Logging" IsChecked="True"/>
+          <CheckBox x:Name="DebugMode" Content="Debug mode"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,12"
+                     Text="Debug mode writes extra diagnostics locally. It does not enable unsafe hardware writes."/>
+          <StackPanel Orientation="Horizontal">
+            <Button Content="Open hardware diagnostics" Click="OpenDiagnosticsHintClick" Margin="0,0,10,0"/>
+            <Button Content="Export settings report" Click="ExportSettingsClick" Margin="0"/>
+          </StackPanel>
+          <TextBlock x:Name="AdvancedStatus" Style="{StaticResource Text.Caption}" Margin="0,10,0,0"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
