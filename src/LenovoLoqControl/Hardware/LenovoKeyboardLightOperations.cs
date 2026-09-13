@@ -187,10 +187,7 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
 
             var speed = packet[3] switch
             {
-                1 => (byte)1,
-                2 => (byte)4,
-                3 => (byte)7,
-                4 => (byte)10,
+                >= 1 and <= 4 => packet[3],
                 _ => (byte)3
             };
             var settings = new KeyboardRgbSettings(
@@ -351,14 +348,17 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
     {
         try
         {
-            using var handle = CreateFile(EnergyDriverPath, 0xC0000000, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
-            if (handle.IsInvalid)
-                return false;
+            return EnergyDrvAccessGate.Execute(() =>
+            {
+                using var handle = CreateFile(EnergyDriverPath, 0xC0000000, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
+                if (handle.IsInvalid)
+                    return false;
 
-            var input = 1u;
-            return DeviceIoControl(handle, EnergyKeyboardIoctl, ref input, sizeof(uint),
-                out var output, sizeof(uint), out _, IntPtr.Zero)
-                && (output >> 1) == 0x2;
+                var input = 1u;
+                return DeviceIoControl(handle, EnergyKeyboardIoctl, ref input, sizeof(uint),
+                    out var output, sizeof(uint), out _, IntPtr.Zero)
+                    && (output >> 1) == 0x2;
+            });
         }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return false; }
@@ -366,15 +366,18 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
 
     private static uint SendEnergyCommand(uint command)
     {
-        using var handle = CreateFile(EnergyDriverPath, 0xC0000000, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
-        if (handle.IsInvalid)
-            throw new InvalidOperationException($"EnergyDrv could not be opened (Windows error {Marshal.GetLastWin32Error()}).");
+        return EnergyDrvAccessGate.Execute(() =>
+        {
+            using var handle = CreateFile(EnergyDriverPath, 0xC0000000, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
+            if (handle.IsInvalid)
+                throw new InvalidOperationException($"EnergyDrv could not be opened (Windows error {Marshal.GetLastWin32Error()}).");
 
-        var input = command;
-        if (!DeviceIoControl(handle, EnergyKeyboardIoctl, ref input, sizeof(uint),
-                out var output, sizeof(uint), out _, IntPtr.Zero))
-            throw new InvalidOperationException($"EnergyDrv rejected the keyboard-light request (Windows error {Marshal.GetLastWin32Error()}).");
-        return output;
+            var input = command;
+            if (!DeviceIoControl(handle, EnergyKeyboardIoctl, ref input, sizeof(uint),
+                    out var output, sizeof(uint), out _, IntPtr.Zero))
+                throw new InvalidOperationException($"EnergyDrv rejected the keyboard-light request (Windows error {Marshal.GetLastWin32Error()}).");
+            return output;
+        });
     }
 
     private static uint? GetLightingType()
@@ -460,7 +463,7 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
 
                     try
                     {
-                        if (HidP_GetCaps(preparsed, out var caps) != 0)
+                        if (HidP_GetCaps(preparsed, out var caps) != 0x00110000)
                             continue;
 
                         var reportType = caps.FeatureReportByteLength switch

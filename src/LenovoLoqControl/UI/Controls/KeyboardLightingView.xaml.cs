@@ -58,7 +58,8 @@ public partial class KeyboardLightingView : UserControl
 
         _lifetimeCts?.Cancel();
         _lifetimeCts?.Dispose();
-        _lifetimeCts = new CancellationTokenSource();
+        var lifetimeCts = new CancellationTokenSource();
+        _lifetimeCts = lifetimeCts;
 
         _presenter.SyncFromBackendMetadata();
         ApplyState(_presenter.State);
@@ -66,8 +67,9 @@ public partial class KeyboardLightingView : UserControl
 
         try
         {
-            await _presenter.RefreshAsync(_lifetimeCts.Token);
-            _deviceSyncTask = SyncDeviceStateAsync(_lifetimeCts.Token);
+            await _presenter.RefreshAsync(lifetimeCts.Token);
+            if (ReferenceEquals(_lifetimeCts, lifetimeCts) && !lifetimeCts.IsCancellationRequested)
+                _deviceSyncTask = SyncDeviceStateAsync(lifetimeCts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -83,17 +85,31 @@ public partial class KeyboardLightingView : UserControl
         }
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e)
+    private async void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        _lifetimeCts?.Cancel();
+        var lifetimeCts = _lifetimeCts;
+        lifetimeCts?.Cancel();
         _rgbPreviewCts?.Cancel();
+        var deviceSyncTask = _deviceSyncTask;
         _deviceSyncTask = null;
-        _lifetimeCts?.Dispose();
         _rgbPreviewCts?.Dispose();
         _lifetimeCts = null;
         _rgbPreviewCts = null;
         ClearSelectionGlow();
         KeyboardPreview.RgbEffect = null;
+
+        if (deviceSyncTask is not null)
+        {
+            try
+            {
+                await deviceSyncTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        lifetimeCts?.Dispose();
     }
 
     private void OnPresenterStateChanged()

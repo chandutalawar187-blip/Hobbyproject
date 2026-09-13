@@ -40,6 +40,7 @@ public partial class RgbColorPickerControl : UserControl
             BuildSwatches();
             ApplySelectedToUi(SelectedColor, raiseEvent: false);
         };
+        Unloaded += (_, _) => CloseEyedropper();
         SvHost.SizeChanged += (_, _) => UpdatePreciseVisuals();
         HueHost.SizeChanged += (_, _) => UpdatePreciseVisuals();
     }
@@ -314,6 +315,11 @@ public partial class RgbColorPickerControl : UserControl
                 args.Handled = true;
                 CloseEyedropper();
             }
+        };
+        overlay.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_eyedropperOverlay, overlay))
+                _eyedropperOverlay = null;
         };
 
         _eyedropperOverlay = overlay;

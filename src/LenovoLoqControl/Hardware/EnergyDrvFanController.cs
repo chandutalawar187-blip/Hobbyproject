@@ -92,23 +92,29 @@ public sealed class EnergyDrvFanController : IFanController
 
     private static bool Probe()
     {
-        using var handle = Open(DeviceAccess.Read);
-        if (handle.IsInvalid) return false;
+        return EnergyDrvAccessGate.Execute(() =>
+        {
+            using var handle = Open(DeviceAccess.Read);
+            if (handle.IsInvalid) return false;
 
-        var query = new[] { FanStateQuery };
-        var output = new uint[1];
-        return DeviceIoControl(handle, IoctlReadFanState, query, sizeof(uint), output, sizeof(uint), out _, IntPtr.Zero);
+            var query = new[] { FanStateQuery };
+            var output = new uint[1];
+            return DeviceIoControl(handle, IoctlReadFanState, query, sizeof(uint), output, sizeof(uint), out _, IntPtr.Zero);
+        });
     }
 
     private static (bool Success, int ErrorCode) Send(uint ioctl, uint command)
     {
-        using var handle = Open(DeviceAccess.ReadWrite, FileShare.None);
-        if (handle.IsInvalid) return (false, Marshal.GetLastWin32Error());
-        var input = ioctl == IoctlSetFanState ? new[] { 6u, 1u, command } : new[] { command };
-        var output = new uint[1];
-        var success = DeviceIoControl(handle, ioctl, input, input.Length * sizeof(uint),
-            output, sizeof(uint), out _, IntPtr.Zero);
-        return (success, success ? 0 : Marshal.GetLastWin32Error());
+        return EnergyDrvAccessGate.Execute(() =>
+        {
+            using var handle = Open(DeviceAccess.ReadWrite, FileShare.None);
+            if (handle.IsInvalid) return (false, Marshal.GetLastWin32Error());
+            var input = ioctl == IoctlSetFanState ? new[] { 6u, 1u, command } : new[] { command };
+            var output = new uint[1];
+            var success = DeviceIoControl(handle, ioctl, input, input.Length * sizeof(uint),
+                output, sizeof(uint), out _, IntPtr.Zero);
+            return (success, success ? 0 : Marshal.GetLastWin32Error());
+        });
     }
 
     private static SafeFileHandle Open(DeviceAccess access, FileShare share = FileShare.Read | FileShare.Write)
