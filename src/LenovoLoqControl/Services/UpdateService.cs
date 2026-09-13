@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Reflection;
 using System.Text;
+using Microsoft.Win32;
 
 namespace LenovoLoqControl.Services;
 
@@ -112,8 +113,7 @@ public sealed class UpdateService
         if (!File.Exists(installerPath))
             throw new FileNotFoundException("Downloaded installer was not found.", installerPath);
 
-        var applicationPath = Environment.ProcessPath
-            ?? throw new InvalidOperationException("The current application path is unavailable.");
+        var applicationPath = ResolveInstalledApplicationPath();
         var currentProcessId = Environment.ProcessId;
         var scriptPath = Path.Combine(
             Path.GetDirectoryName(installerPath)
@@ -143,6 +143,26 @@ public sealed class UpdateService
 
     private static string EscapePowerShell(string value) =>
         value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string ResolveInstalledApplicationPath()
+    {
+        var installPath = Registry.GetValue(
+            @"HKEY_LOCAL_MACHINE\Software\LOQ Control",
+            "InstallPath",
+            null) as string;
+        if (!string.IsNullOrWhiteSpace(installPath))
+        {
+            var installedPath = Path.Combine(installPath, "LoqControl.exe");
+            if (File.Exists(installedPath))
+                return installedPath;
+        }
+
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
+            return processPath;
+
+        throw new InvalidOperationException("The installed application path is unavailable.");
+    }
 
     private static HttpClient CreateClient()
     {

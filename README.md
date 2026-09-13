@@ -65,6 +65,10 @@ area. During an update, the downloaded installer asks for confirmation,
 closes the active session cleanly, replaces the installation, and starts one
 new session.
 
+The MSI only performs its automatic launch on a fresh install. During a
+major upgrade, the updater handoff performs the single relaunch after
+`msiexec` completes, preventing duplicate application windows.
+
 ## What works today
 
 * **Windows telemetry:** refreshes CPU usage, CPU clock, memory usage, battery charge, and charging state every three seconds on the dashboard, with live fan and temperature telemetry refreshed separately on the Fan Control page. Polls are single-flight, and missing fields are shown as **Unavailable**; the app never estimates them.
