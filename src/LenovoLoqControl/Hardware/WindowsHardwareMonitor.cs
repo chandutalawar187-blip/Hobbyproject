@@ -124,6 +124,9 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             catch (ManagementException) { }
             catch (UnauthorizedAccessException) { }
 
+            if (cpuTemperature is null)
+                cpuTemperature = ReadWindowsThermalZoneTemperature();
+
             gpuClock = _gpuClockReader();
 
             try
@@ -210,6 +213,32 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         catch (ManagementException) { return null; }
         catch (InvalidOperationException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
+    }
+
+    private static double? ReadWindowsThermalZoneTemperature()
+    {
+        try
+        {
+            using var thermalZones = new ManagementObjectSearcher(
+                @"root\WMI",
+                "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+            using var rows = thermalZones.Get();
+            var temperatures = rows.Cast<ManagementObject>()
+                .Select(row =>
+                {
+                    using (row)
+                    {
+                        var raw = Convert.ToDouble(row["CurrentTemperature"] ?? 0);
+                        return raw > 0 ? (raw / 10d) - 273.15d : double.NaN;
+                    }
+                })
+                .Where(value => !double.IsNaN(value) && value is >= 0 and <= 125)
+                .ToArray();
+            return temperatures.Length == 0 ? null : temperatures.Max();
+        }
+        catch (ManagementException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+        catch (InvalidOperationException) { return null; }
     }
 
     public void Dispose() => _readLock.Dispose();
