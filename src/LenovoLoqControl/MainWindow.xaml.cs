@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.ComponentModel;
+using System.IO;
 using Forms = System.Windows.Forms;
 using Microsoft.Win32;
 using LenovoLoqControl.Core;
@@ -428,13 +429,21 @@ public partial class MainWindow : Window
 
         var icon = new Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadApplicationIcon(),
             Text = "LOQ Control",
             ContextMenuStrip = menu,
             Visible = true
         };
         icon.DoubleClick += (_, _) => Dispatcher.Invoke(ShowFromTray);
         return icon;
+    }
+
+    private static System.Drawing.Icon LoadApplicationIcon()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "app_icon.ico");
+        return File.Exists(path)
+            ? new System.Drawing.Icon(path)
+            : System.Drawing.SystemIcons.Application;
     }
 
     private void HandleClosing(object? sender, CancelEventArgs e)

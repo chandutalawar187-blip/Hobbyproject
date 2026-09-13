@@ -2,13 +2,14 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.1.3"
+           Version="1.1.4"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
     <MajorUpgrade Schedule="afterInstallInitialize"
                   DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
     <MediaTemplate EmbedCab="yes" />
+    <Icon Id="LoqControlIcon" SourceFile="$(var.PublishDir)\app_icon.ico" />
 
     <Feature Id="MainFeature" Title="LOQ Control" Level="1">
       <ComponentRef Id="ApplicationComponent" />
@@ -50,6 +51,8 @@
                   Description="Lenovo LOQ control center"
                   Target="[INSTALLFOLDER]LoqControl.exe"
                   WorkingDirectory="INSTALLFOLDER"
+                  Icon="LoqControlIcon"
+                  IconIndex="0"
                   Advertise="no" />
         <RemoveFile Id="RemoveStartMenuFiles" Name="*" On="uninstall" />
         <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
