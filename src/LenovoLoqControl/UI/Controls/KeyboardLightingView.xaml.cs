@@ -371,6 +371,8 @@ public partial class KeyboardLightingView : UserControl
             KeyboardPreview.RgbPreviewColor = Colors.White;
             KeyboardPreview.RgbSpeed = 3;
             RgbSpeedValue.Text = "03";
+            RgbSpeedSlider.IsEnabled = true;
+            RgbSpeedValue.Opacity = 1;
             return;
         }
 
@@ -382,7 +384,11 @@ public partial class KeyboardLightingView : UserControl
 
         RgbColorSwatch.Background = new SolidColorBrush(
             Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue));
-        RgbSpeedValue.Text = settings.Speed.ToString("00");
+        RgbSpeedValue.Text = settings.Effect == KeyboardRgbEffect.Static
+            ? "N/A"
+            : settings.Speed.ToString("00");
+        RgbSpeedSlider.IsEnabled = settings.Effect != KeyboardRgbEffect.Static;
+        RgbSpeedValue.Opacity = settings.Effect == KeyboardRgbEffect.Static ? 0.45 : 1;
     }
 
     private bool TryGetRgbSettings(out KeyboardRgbSettings settings)
