@@ -9,7 +9,11 @@
       <Border x:Name="ResultBanner" Style="{StaticResource Badge.Neutral}" Margin="0,0,0,16" Padding="14,8" Visibility="Collapsed">
         <TextBlock x:Name="ResultText" Style="{StaticResource Badge.Text}" TextWrapping="Wrap"/>
       </Border>
-      <UniformGrid x:Name="WorkflowGrid" Columns="2"/>
+      <UniformGrid x:Name="WorkflowGrid" Columns="2"
+                   ui:ResponsiveLayout.AdaptiveColumns="True"
+                   ui:ResponsiveLayout.WideColumns="2"
+                   ui:ResponsiveLayout.NarrowColumns="1"
+                   ui:ResponsiveLayout.Breakpoint="820"/>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

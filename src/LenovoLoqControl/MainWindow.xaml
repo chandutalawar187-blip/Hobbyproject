@@ -1,6 +1,7 @@
 <Window x:Class="LenovoLoqControl.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
         xmlns:shell="clr-namespace:LenovoLoqControl.UI.Shell"
         Title="LOQ Control"
         Width="1280" Height="800"
@@ -72,16 +73,26 @@
                   AutomationProperties.Name="Fan Control"/>
           <Button x:Name="NavLighting"
                   Style="{StaticResource NavigationButton}"
-                  Content="Lighting"
                   Click="LightingClick"
                   ToolTip="Keyboard backlight and RGB effects"
-                  AutomationProperties.Name="Lighting"/>
+                  AutomationProperties.Name="Lighting">
+            <StackPanel Orientation="Horizontal">
+              <controls:NavLottieIcon AssetFileName="RgbCircle.json" IconSize="22"
+                                      AutomationProperties.Name="Lighting icon"/>
+              <TextBlock Text="Lighting" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
           <Button x:Name="NavProfiles"
                   Style="{StaticResource NavigationButton}"
-                  Content="Profiles"
                   Click="ProfilesClick"
                   ToolTip="Quiet, Balanced, Performance, and Custom intents"
-                  AutomationProperties.Name="Profiles"/>
+                  AutomationProperties.Name="Profiles">
+            <StackPanel Orientation="Horizontal">
+              <controls:NavLottieIcon AssetFileName="Task.json" IconSize="22"
+                                      AutomationProperties.Name="Profiles icon"/>
+              <TextBlock Text="Profiles" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
           <Button x:Name="NavProjects"
                   Style="{StaticResource NavigationButton}"
                   Content="Projects"

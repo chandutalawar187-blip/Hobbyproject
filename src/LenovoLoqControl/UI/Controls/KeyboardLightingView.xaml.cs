@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using LenovoLoqControl.Core;
+using LenovoLoqControl.UI;
 
 namespace LenovoLoqControl.UI.Controls;
 
@@ -21,6 +22,7 @@ public partial class KeyboardLightingView : UserControl
     private CancellationTokenSource? _lifetimeCts;
     private bool _stylesReady;
     private bool _syncingDeviceState;
+    private bool _rgbColorSpeedStacked;
     private CancellationTokenSource? _rgbPreviewCts;
     private Task? _deviceSyncTask;
     private Style? _levelIdleStyle;
@@ -31,6 +33,50 @@ public partial class KeyboardLightingView : UserControl
         InitializeComponent();
         Loaded += OnLoadedAsync;
         Unloaded += OnUnloaded;
+    }
+
+    private void RgbColorSpeedGridSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.NewSize.Width <= 0)
+            return;
+        AdaptRgbColorSpeedLayout(e.NewSize.Width);
+    }
+
+    private void AdaptRgbColorSpeedLayout(double width)
+    {
+        if (RgbColorSpeedGrid is null || RgbColorPanel is null || RgbSpeedPanel is null)
+            return;
+
+        var stack = width < ResponsiveLayout.BreakpointMedium;
+        if (stack == _rgbColorSpeedStacked)
+            return;
+
+        _rgbColorSpeedStacked = stack;
+        ResponsiveLayout.Transition(RgbColorSpeedGrid, () =>
+        {
+            if (stack)
+            {
+                RgbColorSpeedGap.Width = new GridLength(0);
+                RgbColorSpeedRowGap.Height = new GridLength(14);
+                Grid.SetColumn(RgbColorPanel, 0);
+                Grid.SetRow(RgbColorPanel, 0);
+                Grid.SetColumnSpan(RgbColorPanel, 3);
+                Grid.SetColumn(RgbSpeedPanel, 0);
+                Grid.SetRow(RgbSpeedPanel, 2);
+                Grid.SetColumnSpan(RgbSpeedPanel, 3);
+            }
+            else
+            {
+                RgbColorSpeedGap.Width = new GridLength(16);
+                RgbColorSpeedRowGap.Height = new GridLength(0);
+                Grid.SetColumn(RgbColorPanel, 0);
+                Grid.SetRow(RgbColorPanel, 0);
+                Grid.SetColumnSpan(RgbColorPanel, 1);
+                Grid.SetColumn(RgbSpeedPanel, 2);
+                Grid.SetRow(RgbSpeedPanel, 0);
+                Grid.SetColumnSpan(RgbSpeedPanel, 1);
+            }
+        }, RgbColorSpeedGrid);
     }
 
     /// <summary>Binds this control to the shared keyboard-light backend (no new hardware objects).</summary>

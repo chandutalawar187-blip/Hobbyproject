@@ -125,7 +125,8 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
                     KeyboardRgbEffect.Breathing => 0x03,
                     KeyboardRgbEffect.ColorCycle => 0x06,
                     KeyboardRgbEffect.Wave => 0x04,
-                    _ => throw new ArgumentOutOfRangeException(nameof(settings))
+                    _ => throw new InvalidOperationException(
+                        $"{settings.Effect} is available as a local preview, but this LOQ's verified RGB interface does not expose a confirmed hardware command for it.")
                 };
                 packet[3] = settings.Effect is KeyboardRgbEffect.Breathing
                     or KeyboardRgbEffect.ColorCycle

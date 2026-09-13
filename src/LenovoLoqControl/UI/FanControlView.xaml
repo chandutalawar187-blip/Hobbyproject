@@ -153,18 +153,10 @@
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <Border x:Name="CapabilityBanner" Grid.Row="0" Style="{StaticResource Card.Warning}" Margin="0,0,0,16">
-        <StackPanel>
-          <TextBlock x:Name="CapabilityTitle" Style="{StaticResource Text.Subtitle}" Text="Checking fan control…"/>
-          <TextBlock x:Name="CapabilityDetail" Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,0" Text="…"/>
-        </StackPanel>
-      </Border>
-
       <!-- Exact ui.png control panel: CPU | RAM | GPU + mode strip -->
-      <Border Grid.Row="1" Style="{StaticResource Fan.MonitorPanel}" Margin="0,0,0,16">
+      <Border Grid.Row="0" Style="{StaticResource Fan.MonitorPanel}" Margin="0,0,0,16" Padding="26,26">
         <StackPanel>
           <Grid>
             <Grid.ColumnDefinitions>
@@ -173,27 +165,39 @@
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource Text.Caption}"
                        Foreground="#6B7A8D"
+                       FontSize="14"
+                       FontWeight="SemiBold"
                        Text="LIVE TELEMETRY"
                        VerticalAlignment="Center"/>
             <TextBlock x:Name="LastUpdatedText"
                        Grid.Column="1"
                        Style="{StaticResource Text.Caption}"
+                       FontSize="13"
                        Text="Waiting…"/>
           </Grid>
 
-          <Grid x:Name="TelemetryModules" Margin="0,14,0,0">
+          <Grid x:Name="TelemetryModules" Margin="0,24,0,8" MinHeight="120"
+                SizeChanged="TelemetryModulesSizeChanged">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="12"/>
+              <ColumnDefinition x:Name="TelemetryGap1" Width="20"/>
               <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="12"/>
+              <ColumnDefinition x:Name="TelemetryGap2" Width="20"/>
               <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition x:Name="TelemetryRowGap1" Height="0"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition x:Name="TelemetryRowGap2" Height="0"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
             <controls:HexMetricModule x:Name="CpuModule"
                                       Grid.Column="0"
                                       Title="CPU"
-                                      ShowFanRow="True"/>
+                                      ShowFanRow="True"
+                                      ShowIsometricFanLottie="True"/>
             <controls:HexMetricModule x:Name="RamModule"
                                       Grid.Column="2"
                                       Title="RAM"
@@ -201,7 +205,8 @@
             <controls:HexMetricModule x:Name="GpuModule"
                                       Grid.Column="4"
                                       Title="GPU"
-                                      ShowFanRow="True"/>
+                                      ShowFanRow="True"
+                                      ShowIsometricFanLottie="True"/>
           </Grid>
 
           <Border Style="{StaticResource Fan.ModeStrip}">
@@ -255,7 +260,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Row="2" Style="{StaticResource Panel.Section}" Margin="0,0,0,16">
+      <Border Grid.Row="1" Style="{StaticResource Panel.Section}" Margin="0,0,0,16">
         <StackPanel>
           <TextBlock Style="{StaticResource Text.Subtitle}" Text="Fixed fan speed"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,12" TextWrapping="Wrap"
@@ -266,7 +271,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Row="3" Style="{StaticResource Panel.Section}" Margin="0,0,0,12">
+      <Border Grid.Row="2" Style="{StaticResource Panel.Section}" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Style="{StaticResource Text.Subtitle}" Text="Custom fan curve"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,14" TextWrapping="Wrap"

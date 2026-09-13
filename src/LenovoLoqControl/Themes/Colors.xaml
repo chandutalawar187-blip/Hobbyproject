@@ -30,6 +30,18 @@
   <Color x:Key="Color.Critical">#FF4D5E</Color>
   <Color x:Key="Color.Information">#62A8FF</Color>
 
+  <!-- Premium slider (dark glass pill + Lenovo accent track + warm value pin) -->
+  <Color x:Key="Color.SliderPill">#CC1B222D</Color>
+  <Color x:Key="Color.SliderPillEdge">#552A3340</Color>
+  <Color x:Key="Color.SliderPillTop">#E81B222D</Color>
+  <Color x:Key="Color.SliderPillBottom">#B8151B24</Color>
+  <Color x:Key="Color.SliderTrack">#E2231A</Color>
+  <Color x:Key="Color.SliderTrackMuted">#55E2231A</Color>
+  <Color x:Key="Color.SliderHalo">#33E2231A</Color>
+  <Color x:Key="Color.SliderThumb">#FFFFFF</Color>
+  <Color x:Key="Color.SliderPinTop">#FFD54F</Color>
+  <Color x:Key="Color.SliderPinBottom">#FF7043</Color>
+
   <!-- Thermal ring gradients (stops used by later components) -->
   <Color x:Key="Color.ThermalCool">#47D18C</Color>
   <Color x:Key="Color.ThermalNormal">#62A8FF</Color>

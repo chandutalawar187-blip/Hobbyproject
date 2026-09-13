@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly Forms.NotifyIcon _trayIcon;
     private bool _allowClose;
     private bool _refreshingShell;
+    private int _shellDensity = -1;
     private PageKind _currentPage = PageKind.Dashboard;
 
     public MainWindow()
@@ -255,24 +256,40 @@ public partial class MainWindow : Window
     {
         // Compact the rail and content padding on smaller widths / effective DPI layouts.
         var width = e.NewSize.Width;
+        int density;
+        double navWidth;
+        Thickness contentPadding;
+        Thickness railPadding;
+
         if (width < 1100)
         {
-            NavColumn.Width = new GridLength(212);
-            ContentHostBorder.Padding = new Thickness(18, 12, 18, 8);
-            NavRail.Padding = new Thickness(14, 22, 12, 18);
+            density = 0;
+            navWidth = 212;
+            contentPadding = new Thickness(18, 12, 18, 8);
+            railPadding = new Thickness(14, 22, 12, 18);
         }
         else if (width < 1400)
         {
-            NavColumn.Width = new GridLength(248);
-            ContentHostBorder.Padding = new Thickness(28, 16, 32, 12);
-            NavRail.Padding = new Thickness(20, 28, 16, 24);
+            density = 1;
+            navWidth = 248;
+            contentPadding = new Thickness(28, 16, 32, 12);
+            railPadding = new Thickness(20, 28, 16, 24);
         }
         else
         {
-            NavColumn.Width = new GridLength(280);
-            ContentHostBorder.Padding = new Thickness(36, 18, 40, 14);
-            NavRail.Padding = new Thickness(24, 32, 18, 26);
+            density = 2;
+            navWidth = 280;
+            contentPadding = new Thickness(36, 18, 40, 14);
+            railPadding = new Thickness(24, 32, 18, 26);
         }
+
+        if (density == _shellDensity)
+            return;
+
+        _shellDensity = density;
+        NavColumn.Width = new GridLength(navWidth);
+        ResponsiveLayout.AnimateThickness(ContentHostBorder, Border.PaddingProperty, contentPadding);
+        ResponsiveLayout.AnimateThickness(NavRail, Border.PaddingProperty, railPadding);
     }
 
     protected override void OnClosed(EventArgs e)

@@ -15,7 +15,9 @@ namespace LenovoLoqControl.UI.Controls;
 /// </summary>
 public sealed class HexMetricModule : Grid
 {
-    private const double HexSize = 88;
+    private const double HexSizeMax = 156;
+    private const double HexSizeMin = 78;
+    private const double LabelColumnMinWidth = 104;
     private const double ProgressEpsilon = 0.004; // ~0.4% — ignore jitter between polls
     private const double ProgressAnimMinMs = 640;
     private const double ProgressAnimMaxMs = 1500;
@@ -54,10 +56,15 @@ public sealed class HexMetricModule : Grid
         DependencyProperty.Register(nameof(ShowFanRow), typeof(bool), typeof(HexMetricModule),
             new PropertyMetadata(true, OnLabelsChanged));
 
+    public static readonly DependencyProperty ShowIsometricFanLottieProperty =
+        DependencyProperty.Register(nameof(ShowIsometricFanLottie), typeof(bool), typeof(HexMetricModule),
+            new PropertyMetadata(false, OnIsometricFanLottieChanged));
+
     public static readonly DependencyProperty PreferReducedMotionProperty =
         DependencyProperty.Register(nameof(PreferReducedMotion), typeof(bool), typeof(HexMetricModule),
             new PropertyMetadata(false, OnMotionPreferenceChanged));
 
+    private readonly ColumnDefinition _hexColumn;
     private readonly Canvas _hexCanvas;
     private readonly Path _outerTrack;
     private readonly Path _progressPath;
@@ -66,10 +73,13 @@ public sealed class HexMetricModule : Grid
     private readonly Ellipse _progressTip;
     private readonly DropShadowEffect _tipGlow;
     private readonly TextBlock _percentText;
+    private readonly StackPanel _labels;
     private readonly TextBlock _titleText;
     private readonly TextBlock _detailText;
     private readonly StackPanel _fanRow;
     private readonly TextBlock _fanText;
+    private GpuIsometricFanLottie? _isometricFanLottie;
+    private double _hexSize = HexSizeMax;
 
     // Cached mutable brushes — animated in place; never recreated on telemetry refresh.
     private readonly SolidColorBrush _progressBrush;
@@ -105,11 +115,12 @@ public sealed class HexMetricModule : Grid
 
     public HexMetricModule()
     {
-        MinWidth = 220;
-        MinHeight = 100;
+        MinWidth = 148;
+        MinHeight = 96;
         Background = Brushes.Transparent;
         Focusable = false;
         SnapsToDevicePixels = true;
+        ClipToBounds = true;
 
         _progressBrush = new SolidColorBrush(DefaultAccent);
         _tipBrush = new SolidColorBrush(DefaultAccent);
@@ -133,16 +144,17 @@ public sealed class HexMetricModule : Grid
         };
         _tipScale = new ScaleTransform(1, 1);
 
-        ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(HexSize + 8) });
-        ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _hexColumn = new ColumnDefinition { Width = new GridLength(_hexSize + 8) };
+        ColumnDefinitions.Add(_hexColumn);
+        ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = LabelColumnMinWidth });
 
         _hexCanvas = new Canvas
         {
-            Width = HexSize,
-            Height = HexSize,
+            Width = _hexSize,
+            Height = _hexSize,
             IsHitTestVisible = false,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 14, 0)
+            Margin = new Thickness(0, 0, 10, 0)
         };
         SetColumn(_hexCanvas, 0);
         Children.Add(_hexCanvas);
@@ -199,7 +211,7 @@ public sealed class HexMetricModule : Grid
 
         _percentText = new TextBlock
         {
-            FontSize = 20,
+            FontSize = 28,
             FontWeight = FontWeights.SemiBold,
             Foreground = Brushes.White,
             Text = "—",
@@ -207,47 +219,49 @@ public sealed class HexMetricModule : Grid
         };
         _hexCanvas.Children.Add(_percentText);
 
-        var labels = new StackPanel
+        _labels = new StackPanel
         {
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(4, 0, 0, 0)
+            Margin = new Thickness(2, 0, 0, 0)
         };
-        SetColumn(labels, 1);
-        Children.Add(labels);
+        SetColumn(_labels, 1);
+        Children.Add(_labels);
 
         _titleText = new TextBlock
         {
-            FontSize = 15,
+            FontSize = 18,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(TitleColor),
-            Text = "CPU"
+            Text = "CPU",
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
-        labels.Children.Add(_titleText);
+        _labels.Children.Add(_titleText);
 
         _detailText = new TextBlock
         {
-            FontSize = 12,
+            FontSize = 14,
             Foreground = new SolidColorBrush(DetailColor),
-            Margin = new Thickness(0, 6, 0, 0),
-            Text = "—"
+            Margin = new Thickness(0, 10, 0, 0),
+            Text = "—",
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
-        labels.Children.Add(_detailText);
+        _labels.Children.Add(_detailText);
 
         _fanRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 6, 0, 0)
+            Margin = new Thickness(0, 10, 0, 0)
         };
-        labels.Children.Add(_fanRow);
+        _labels.Children.Add(_fanRow);
 
-        _fanRow.Children.Add(CreateFanIcon());
         _fanText = new TextBlock
         {
-            FontSize = 12,
+            FontSize = 14,
             Foreground = new SolidColorBrush(DetailColor),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(6, 0, 0, 0),
-            Text = "— RPM"
+            Text = "— RPM",
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
         _fanRow.Children.Add(_fanText);
 
@@ -255,18 +269,71 @@ public sealed class HexMetricModule : Grid
         AutomationProperties.SetName(this, "Hardware metric");
 
         Loaded += OnLoaded;
-        SizeChanged += (_, _) => LayoutHex();
+        SizeChanged += OnModuleSizeChanged;
         Unloaded += (_, _) =>
         {
             Loaded -= OnLoaded;
+            SizeChanged -= OnModuleSizeChanged;
             StopProgressAnimation();
             StopAmbientAnimation();
             StopAccentAnimation();
             ClearLabelClocks();
+            _isometricFanLottie?.SetPlaybackEnabled(false);
         };
 
+        RebuildFanRowLeading();
+        ApplyDensity(_hexSize);
         LayoutHex();
         UpdateLabels(animate: false);
+    }
+
+    private void OnModuleSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!_constructed || e.NewSize.Width <= 0)
+            return;
+
+        UpdateResponsiveDensity(e.NewSize.Width);
+        LayoutHex();
+    }
+
+    /// <summary>
+    /// Shrinks the hex so the label column keeps readable width in narrow layouts.
+    /// </summary>
+    private void UpdateResponsiveDensity(double width)
+    {
+        var gutter = 12d;
+        var maxHexForLabels = Math.Max(HexSizeMin, width - LabelColumnMinWidth - gutter);
+        var target = Math.Clamp(Math.Min(HexSizeMax, maxHexForLabels), HexSizeMin, HexSizeMax);
+        if (Math.Abs(target - _hexSize) < 0.5)
+            return;
+
+        ApplyDensity(target);
+    }
+
+    private void ApplyDensity(double hexSize)
+    {
+        _hexSize = hexSize;
+        var scale = hexSize / HexSizeMax;
+
+        _hexColumn.Width = new GridLength(hexSize + 8);
+        _hexCanvas.Width = hexSize;
+        _hexCanvas.Height = hexSize;
+        _hexCanvas.Margin = new Thickness(0, 0, Math.Max(6, 10 * scale), 0);
+
+        _outerTrack.StrokeThickness = Math.Max(3.5, 5 * scale);
+        _progressPath.StrokeThickness = Math.Max(4, 6 * scale);
+        _progressTip.Width = Math.Max(6, 8 * scale);
+        _progressTip.Height = _progressTip.Width;
+
+        _percentText.FontSize = Math.Max(14, 28 * scale);
+        _titleText.FontSize = Math.Max(12, 18 * scale);
+        _detailText.FontSize = Math.Max(11, 14 * scale);
+        _fanText.FontSize = Math.Max(11, 14 * scale);
+        _detailText.Margin = new Thickness(0, Math.Max(4, 10 * scale), 0, 0);
+        _fanRow.Margin = new Thickness(0, Math.Max(4, 10 * scale), 0, 0);
+        MinHeight = Math.Max(88, hexSize);
+
+        _isometricFanLottie?.SetDisplayScale(scale);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -286,6 +353,7 @@ public sealed class HexMetricModule : Grid
         }
 
         StartAmbientAnimation();
+        SyncIsometricFanLottiePlayback();
     }
 
     public string Title
@@ -316,6 +384,12 @@ public sealed class HexMetricModule : Grid
     {
         get => (bool)GetValue(ShowFanRowProperty);
         set => SetValue(ShowFanRowProperty, value);
+    }
+
+    public bool ShowIsometricFanLottie
+    {
+        get => (bool)GetValue(ShowIsometricFanLottieProperty);
+        set => SetValue(ShowIsometricFanLottieProperty, value);
     }
 
     public bool PreferReducedMotion
@@ -579,6 +653,89 @@ public sealed class HexMetricModule : Grid
             m.StopAmbientAnimation();
         else
             m.StartAmbientAnimation();
+        m.SyncIsometricFanLottiePlayback();
+    }
+
+    private static void OnIsometricFanLottieChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is HexMetricModule { _constructed: true } m)
+            m.RebuildFanRowLeading();
+    }
+
+    /// <summary>
+    /// Fan row leading visual is either the procedural glyph or the GPU Lottie — never both.
+    /// XAML may set <see cref="ShowIsometricFanLottie"/> after construction, so this must be idempotent.
+    /// </summary>
+    private void RebuildFanRowLeading()
+    {
+        if (!_constructed)
+            return;
+
+        var wantLottie = ShowIsometricFanLottie && ShowFanRow;
+
+        UIElement? leading = null;
+        for (var i = 0; i < _fanRow.Children.Count; i++)
+        {
+            if (ReferenceEquals(_fanRow.Children[i], _fanText))
+                continue;
+            leading = (UIElement)_fanRow.Children[i];
+            break;
+        }
+
+        if (wantLottie)
+        {
+            if (_isometricFanLottie is not null && ReferenceEquals(leading, _isometricFanLottie))
+            {
+                _fanText.Margin = new Thickness(0, 0, 0, 0);
+                SyncIsometricFanLottiePlayback();
+                return;
+            }
+
+            // Remove procedural glyph (or any stale leading control).
+            if (leading is not null)
+                _fanRow.Children.Remove(leading);
+
+        _isometricFanLottie ??= new GpuIsometricFanLottie();
+        if (!_fanRow.Children.Contains(_isometricFanLottie))
+            _fanRow.Children.Insert(0, _isometricFanLottie);
+
+        _isometricFanLottie.SetDisplayScale(_hexSize / HexSizeMax);
+        _fanText.Margin = new Thickness(0, 0, 0, 0);
+        SyncIsometricFanLottiePlayback();
+        return;
+        }
+
+        if (_isometricFanLottie is not null)
+        {
+            _isometricFanLottie.SetPlaybackEnabled(false);
+            _fanRow.Children.Remove(_isometricFanLottie);
+            _isometricFanLottie = null;
+            leading = null;
+            for (var i = 0; i < _fanRow.Children.Count; i++)
+            {
+                if (ReferenceEquals(_fanRow.Children[i], _fanText))
+                    continue;
+                leading = (UIElement)_fanRow.Children[i];
+                break;
+            }
+        }
+
+        if (ShowFanRow && leading is null)
+            _fanRow.Children.Insert(0, CreateFanIcon());
+
+        _fanText.Margin = new Thickness(6, 0, 0, 0);
+    }
+
+    private void SyncIsometricFanLottiePlayback()
+    {
+        if (_isometricFanLottie is null)
+            return;
+
+        var play = ShowFanRow
+            && IsLoaded
+            && IsVisible
+            && !(PreferReducedMotion || AppUiPreferences.ReducedMotion || !UiAnimation.ShouldAnimate);
+        _isometricFanLottie.SetPlaybackEnabled(play);
     }
 
     private static UIElement CreateFanIcon()
@@ -612,11 +769,12 @@ public sealed class HexMetricModule : Grid
 
     private void LayoutHex()
     {
-        var cx = HexSize / 2d;
-        var cy = HexSize / 2d;
-        const double outerR = 38;
-        const double innerR = 28;
-        const double coreR = 20;
+        var cx = _hexSize / 2d;
+        var cy = _hexSize / 2d;
+        // Scale ring radii with _hexSize (baseline was 88 → 38/28/20).
+        var outerR = _hexSize * (38d / 88d);
+        var innerR = _hexSize * (28d / 88d);
+        var coreR = _hexSize * (20d / 88d);
 
         _outerTrack.Data = BuildHexGeometry(cx, cy, outerR);
         _innerHex.Data = BuildHexGeometry(cx, cy, innerR);
@@ -652,6 +810,7 @@ public sealed class HexMetricModule : Grid
         if (!ShowFanRow)
         {
             _fanRow.Visibility = Visibility.Collapsed;
+            SyncIsometricFanLottiePlayback();
             return;
         }
 
@@ -891,8 +1050,8 @@ public sealed class HexMetricModule : Grid
             {
                 _displayedPercent = fromPercent + (toPercent - fromPercent) * eased;
                 _percentText.Text = $"{_displayedPercent:0}%";
-                var cx = HexSize / 2d;
-                var cy = HexSize / 2d;
+                var cx = _hexSize / 2d;
+                var cy = _hexSize / 2d;
                 _percentText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Canvas.SetLeft(_percentText, cx - _percentText.DesiredSize.Width / 2d);
                 Canvas.SetTop(_percentText, cy - _percentText.DesiredSize.Height / 2d);
