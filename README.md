@@ -59,6 +59,12 @@ startup list. MSI upgrades reuse the shared upgrade code to replace the
 previous installation, while uninstall removes the startup registration and
 Start Menu shortcut.
 
+LOQ Control is single-instance. Launching it again activates the existing
+window, including when the current window is minimized to the notification
+area. During an update, the downloaded installer asks for confirmation,
+closes the active session cleanly, replaces the installation, and starts one
+new session.
+
 ## What works today
 
 * **Windows telemetry:** refreshes CPU usage, CPU clock, memory usage, battery charge, and charging state every three seconds on the dashboard, with live fan and temperature telemetry refreshed separately on the Fan Control page. Polls are single-flight, and missing fields are shown as **Unavailable**; the app never estimates them.

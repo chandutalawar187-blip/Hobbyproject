@@ -451,6 +451,8 @@ public partial class MainWindow : Window
             Forms.ToolTipIcon.Info);
     }
 
+    internal void ShowFromAnotherInstance() => Dispatcher.Invoke(ShowFromTray);
+
     private void ShowFromTray()
     {
         Show();
@@ -460,6 +462,13 @@ public partial class MainWindow : Window
     }
 
     private void ExitFromTray()
+    {
+        _allowClose = true;
+        _trayIcon.Visible = false;
+        Close();
+    }
+
+    internal void CloseForUpdate()
     {
         _allowClose = true;
         _trayIcon.Visible = false;
