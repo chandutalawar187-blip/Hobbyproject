@@ -28,6 +28,7 @@ public partial class FanControlView : UserControl
     private Slider? _fixedSpeedSlider;
     private Button? _selectedModeButton;
     private bool _refreshing;
+    private bool _appMaxCoolingActive;
     private readonly DropShadowEffect _modeButtonGlow = new()
     {
         BlurRadius = 16,
@@ -448,7 +449,10 @@ public partial class FanControlView : UserControl
                 message += " Safety minimums apply at 85°C and above.";
             ShowResult(message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -487,7 +491,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanCurveAsync(curve, CancellationToken.None);
             ShowResult(result.Accepted ? result.Message : $"Curve was not applied. {result.Message}", result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -523,7 +530,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanCurveAsync(curve, CancellationToken.None);
             ShowResult(result.Accepted ? result.Message : $"Curve was not applied. {result.Message}", result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -552,6 +562,7 @@ public partial class FanControlView : UserControl
     private void ModeCustomClick(object sender, RoutedEventArgs e)
     {
         if (!ModeCustom.IsEnabled) return;
+        _appMaxCoolingActive = false;
         HighlightMode(ModeCustom);
         ShowResult("Custom selected. Edit the curve below, then Apply curve to send it to firmware.", accepted: null);
         CurvePanel.BringIntoView();
@@ -571,7 +582,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = enabled;
                 HighlightMode(enabled ? ModeMaxCooling : ModeCustom);
+            }
             else
                 ExtremeModeToggle.IsChecked = !enabled;
         }
@@ -617,7 +631,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = mode == FanMode.MaxCooling;
                 HighlightMode(button);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -764,7 +781,12 @@ public partial class FanControlView : UserControl
             ApplyTelemetry(reading);
             var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
             if (mode is FanMode currentMode)
-                HighlightMode(ModeButtonFor(currentMode));
+            {
+                var displayedMode = currentMode == FanMode.Custom && _appMaxCoolingActive
+                    ? FanMode.MaxCooling
+                    : currentMode;
+                HighlightMode(ModeButtonFor(displayedMode));
+            }
             if (_curveGraph is not null)
                 _curveGraph.CurrentTemperature = reading.CpuTemperature ?? reading.GpuTemperature;
         }
