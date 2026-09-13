@@ -13,7 +13,7 @@ public sealed record KeyboardRgbSettings(KeyboardRgbEffect Effect, KeyboardRgbCo
     public void Validate()
     {
         if (!Enum.IsDefined(Effect)) throw new ArgumentOutOfRangeException(nameof(Effect));
-        if (Speed > 10) throw new ArgumentOutOfRangeException(nameof(Speed), "Speed must be between 0 and 10.");
+        if (Speed is < 1 or > 4) throw new ArgumentOutOfRangeException(nameof(Speed), "Speed must be between 1 and 4.");
     }
 }
 public enum KeyboardZoneType

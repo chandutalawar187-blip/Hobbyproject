@@ -217,7 +217,7 @@ public class KeyboardLightingPresenterTests
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             new KeyboardRgbSettings((KeyboardRgbEffect)99, KeyboardRgbColor.White, 3).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new KeyboardRgbSettings(KeyboardRgbEffect.Static, KeyboardRgbColor.White, 11).Validate());
+            new KeyboardRgbSettings(KeyboardRgbEffect.Static, KeyboardRgbColor.White, 5).Validate());
     }
 }
 

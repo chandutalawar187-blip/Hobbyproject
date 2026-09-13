@@ -398,7 +398,7 @@ public partial class KeyboardLightingView : UserControl
             EffectWave.IsChecked == true ? KeyboardRgbEffect.Wave :
             KeyboardRgbEffect.Static;
 
-        settings = new KeyboardRgbSettings(effect, color, (byte)Math.Clamp((int)RgbSpeedSlider.Value, 0, 10));
+        settings = new KeyboardRgbSettings(effect, color, (byte)Math.Clamp((int)RgbSpeedSlider.Value, 1, 4));
         return true;
     }
 

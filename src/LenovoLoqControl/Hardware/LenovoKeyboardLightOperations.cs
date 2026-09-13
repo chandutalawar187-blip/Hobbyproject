@@ -327,13 +327,7 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
         }
     }
 
-    private static byte MapSpeed(byte speed) => speed switch
-    {
-        0 or 1 or 2 => 1,
-        3 or 4 or 5 => 2,
-        6 or 7 or 8 => 3,
-        _ => 4
-    };
+    private static byte MapSpeed(byte speed) => Math.Clamp(speed, (byte)1, (byte)4);
 
     private static KeyboardZoneType DetectZoneType()
     {

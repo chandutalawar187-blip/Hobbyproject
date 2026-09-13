@@ -564,10 +564,10 @@ public sealed class KeyboardLayoutVisual : Grid
     private void ApplyRgbEffect(KeyboardRgbEffect effect, bool reduced)
     {
         var baseColor = RgbPreviewColor ?? Colors.White;
-        var speed = Math.Clamp(RgbSpeed, 0, 10);
+        var speed = Math.Clamp(RgbSpeed, 1, 4);
         var elapsed = (DateTime.UtcNow - _animStartUtc).TotalSeconds;
         // Map firmware speed 0–10 → animation rate (cycles per second-ish).
-        var rate = 0.18 + speed * 0.22;
+        var rate = 0.18 + (speed - 1) * 0.22;
 
         switch (effect)
         {
