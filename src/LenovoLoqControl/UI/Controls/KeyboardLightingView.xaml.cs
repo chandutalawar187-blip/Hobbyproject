@@ -312,7 +312,11 @@ public partial class KeyboardLightingView : UserControl
     private void RgbEffectChipChecked(object sender, RoutedEventArgs e)
     {
         if (!_syncingDeviceState)
+        {
+            if (EffectColorCycle.IsChecked == true)
+                ColorPickerPopup.IsOpen = false;
             QueueRgbPreview();
+        }
     }
 
     private void RgbPreviewChanged(object sender, RoutedEventArgs e)
@@ -427,6 +431,8 @@ public partial class KeyboardLightingView : UserControl
             _syncingDeviceState = false;
         }
 
+        if (TryGetRgbSettings(out var settings))
+            UpdateLiveKeyboardPreview(settings);
         QueueRgbPreview();
     }
 
