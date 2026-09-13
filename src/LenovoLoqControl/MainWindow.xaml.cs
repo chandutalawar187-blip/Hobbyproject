@@ -121,6 +121,9 @@ public partial class MainWindow : Window
     private void FanClick(object sender, RoutedEventArgs e) =>
         Navigate(PageKind.Fan, "Fan Control", "Firmware modes, fixed speed, and safe curves", new FanControlView(_hardware));
 
+    private void LightingClick(object sender, RoutedEventArgs e) =>
+        Navigate(PageKind.Lighting, "Lighting", "Keyboard backlight and verified RGB effects", new LightingView(_hardware));
+
     private void ProfilesClick(object sender, RoutedEventArgs e) =>
         Navigate(PageKind.Profiles, "Profiles", "Workload intent without hiding firmware limits", new ProfilesView(_hardware));
 
@@ -148,6 +151,7 @@ public partial class MainWindow : Window
         {
             PageKind.Dashboard => NavDashboard,
             PageKind.Fan => NavFan,
+            PageKind.Lighting => NavLighting,
             PageKind.Profiles => NavProfiles,
             PageKind.Projects => NavProjects,
             PageKind.Diagnostics => NavDiagnostics,
@@ -335,6 +339,7 @@ public partial class MainWindow : Window
     {
         Dashboard,
         Fan,
+        Lighting,
         Profiles,
         Projects,
         Diagnostics,

@@ -41,8 +41,6 @@ public partial class FanControlView : UserControl
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
-        KeyboardLighting.Attach(_hardware.KeyboardLight);
-
         var identity = _hardware.Monitor.Identity;
         var supported = _hardware.FanController.IsSupported;
         CapabilityTitle.Text = supported ? "Firmware fan modes available" : "Fan control unavailable";

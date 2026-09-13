@@ -1,0 +1,8 @@
+<UserControl x:Class="LenovoLoqControl.UI.LightingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+    <controls:KeyboardLightingView x:Name="KeyboardLighting"/>
+  </ScrollViewer>
+</UserControl>

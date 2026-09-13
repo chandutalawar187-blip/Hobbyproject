@@ -70,6 +70,12 @@
                   Click="FanClick"
                   ToolTip="Firmware fan modes, fixed speed, and curves"
                   AutomationProperties.Name="Fan Control"/>
+          <Button x:Name="NavLighting"
+                  Style="{StaticResource NavigationButton}"
+                  Content="Lighting"
+                  Click="LightingClick"
+                  ToolTip="Keyboard backlight and RGB effects"
+                  AutomationProperties.Name="Lighting"/>
           <Button x:Name="NavProfiles"
                   Style="{StaticResource NavigationButton}"
                   Content="Profiles"

@@ -255,10 +255,7 @@
         </StackPanel>
       </Border>
 
-      <controls:KeyboardLightingView x:Name="KeyboardLighting"
-                                     Grid.Row="2"/>
-
-      <Border Grid.Row="3" Style="{StaticResource Panel.Section}" Margin="0,0,0,16">
+      <Border Grid.Row="2" Style="{StaticResource Panel.Section}" Margin="0,0,0,16">
         <StackPanel>
           <TextBlock Style="{StaticResource Text.Subtitle}" Text="Fixed fan speed"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,12" TextWrapping="Wrap"
@@ -269,7 +266,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Row="4" Style="{StaticResource Panel.Section}" Margin="0,0,0,12">
+      <Border Grid.Row="3" Style="{StaticResource Panel.Section}" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Style="{StaticResource Text.Subtitle}" Text="Custom fan curve"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,14" TextWrapping="Wrap"
