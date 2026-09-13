@@ -124,6 +124,9 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             catch (ManagementException) { }
             catch (UnauthorizedAccessException) { }
 
+            if (cpuTemperature is null)
+                cpuTemperature = ReadWindowsThermalZoneTemperature();
+
             gpuClock = _gpuClockReader();
 
             try
@@ -210,6 +213,52 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         catch (ManagementException) { return null; }
         catch (InvalidOperationException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
+    }
+
+    private static double? ReadWindowsThermalZoneTemperature()
+    {
+        var acpiTemperature = ReadTemperatureQuery(
+            @"root\WMI",
+            "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+        if (acpiTemperature is not null)
+            return acpiTemperature;
+
+        return ReadTemperatureQuery(
+            @"root\CIMV2",
+            "SELECT CurrentReading FROM Win32_TemperatureProbe");
+    }
+
+    private static double? ReadTemperatureQuery(string scope, string query)
+    {
+        try
+        {
+            using var thermalZones = new ManagementObjectSearcher(
+                scope,
+                query);
+            using var rows = thermalZones.Get();
+            var temperatures = rows.Cast<ManagementObject>()
+                .Select(row =>
+                {
+                    using (row)
+                    {
+                        var property = row.Properties
+                            .Cast<PropertyData>()
+                            .FirstOrDefault(candidate =>
+                                string.Equals(candidate.Name, "CurrentTemperature", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(candidate.Name, "CurrentReading", StringComparison.OrdinalIgnoreCase));
+                        var raw = Convert.ToDouble(property?.Value ?? 0);
+                        return string.Equals(property?.Name, "CurrentTemperature", StringComparison.OrdinalIgnoreCase)
+                            ? raw > 0 ? (raw / 10d) - 273.15d : double.NaN
+                            : raw;
+                    }
+                })
+                .Where(value => !double.IsNaN(value) && value is >= 0 and <= 125)
+                .ToArray();
+            return temperatures.Length == 0 ? null : temperatures.Max();
+        }
+        catch (ManagementException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+        catch (InvalidOperationException) { return null; }
     }
 
     public void Dispose() => _readLock.Dispose();

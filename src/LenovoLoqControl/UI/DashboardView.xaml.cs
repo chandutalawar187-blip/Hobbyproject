@@ -38,8 +38,13 @@ public partial class DashboardView : UserControl
     {
         var identity = _hardware.Monitor.Identity;
         OverviewModelText.Text = $"{identity.Manufacturer}  ·  {identity.Model}";
+        var supportedDevice = identity.IsLenovoLoq;
+        UnsupportedDeviceBanner.Visibility = supportedDevice ? Visibility.Collapsed : Visibility.Visible;
+        UnsupportedDeviceText.Text = "Your device is unsupported. Telemetry is available, but Lenovo LOQ controls and profiles are disabled.";
         var supported = _hardware.FanController.IsSupported;
-        OverviewProviderText.Text = supported
+        OverviewProviderText.Text = !supportedDevice
+            ? "Unsupported device · telemetry only"
+            : supported
             ? "Firmware provider ready · preset thermal modes available"
             : "No verified fan-control interface · monitoring only";
         OverviewModeText.Text = supported ? "Mode · Loading" : "Modes unavailable";

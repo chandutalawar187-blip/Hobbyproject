@@ -16,6 +16,9 @@ public partial class ProfilesView : UserControl
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
+        UnsupportedDeviceBanner.Visibility = _hardware.Monitor.Identity.IsLenovoLoq
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         BuildCards();
     }
 
@@ -70,7 +73,8 @@ public partial class ProfilesView : UserControl
             Style = (Style)FindResource(mode is null ? "Button.Ghost" : "Button.Primary"),
             HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(0),
-            IsEnabled = mode is null || _hardware.FanController.IsSupported,
+            IsEnabled = _hardware.Monitor.Identity.IsLenovoLoq &&
+                (mode is null || _hardware.FanController.IsSupported),
             ToolTip = mode is null
                 ? "Custom profiles are applied from Fan Control after editing the curve."
                 : _hardware.FanController.AvailabilityMessage
@@ -89,7 +93,8 @@ public partial class ProfilesView : UserControl
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
                 SetActive(name);
-            apply.IsEnabled = _hardware.FanController.IsSupported;
+            apply.IsEnabled = _hardware.Monitor.Identity.IsLenovoLoq &&
+                _hardware.FanController.IsSupported;
         };
         root.Children.Add(apply);
 

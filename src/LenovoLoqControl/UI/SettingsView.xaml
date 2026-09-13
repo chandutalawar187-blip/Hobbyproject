@@ -21,6 +21,52 @@
         </StackPanel>
       </Border>
 
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="About LOQ Control"/>
+          <TextBlock x:Name="VersionText"
+                     Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,8,0,0"
+                     Text="Version"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,4,0,0"
+                     Text="Native Lenovo LOQ monitoring and hardware safety controls."/>
+        </StackPanel>
+      </Border>
+
+      <!-- Updates -->
+      <Border Style="{StaticResource Panel.Section}">
+        <StackPanel>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Updates"/>
+          <TextBlock x:Name="UpdateStatus"
+                     Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,8,0,12"
+                     Text="Checking for updates…"
+                     TextWrapping="Wrap"/>
+          <ProgressBar x:Name="UpdateProgress"
+                       Height="6"
+                       Margin="0,0,0,12"
+                       Visibility="Collapsed"
+                       Minimum="0"
+                       Maximum="1"/>
+          <StackPanel Orientation="Horizontal">
+            <Button x:Name="CheckUpdatesButton"
+                    Content="Check for updates"
+                    Click="CheckUpdatesClick"
+                    Margin="0,0,10,0"/>
+            <Button x:Name="InstallUpdateButton"
+                    Content="Download and install"
+                    Style="{StaticResource Button.Primary}"
+                    Click="InstallUpdateClick"
+                    Visibility="Collapsed"/>
+          </StackPanel>
+          <TextBlock Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,10,0,0"
+                     Text="Updates are downloaded from the official GitHub release and installed only after you confirm."
+                     TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+
       <!-- Monitoring -->
       <Border Style="{StaticResource Panel.Section}">
         <StackPanel>

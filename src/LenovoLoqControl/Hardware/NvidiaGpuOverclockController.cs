@@ -24,9 +24,19 @@ public sealed class NvidiaGpuOverclockController : IGpuOverclockController
             var handle = GPUApi.EnumPhysicalGPUs().FirstOrDefault();
             _gpu = handle.Equals(default(PhysicalGPUHandle)) ? null : new PhysicalGPU(handle);
         }
-        catch (Exception ex) when (ex is NVIDIAApiException or InvalidOperationException)
+        catch (Exception ex) when (ex is NVIDIAApiException
+            or InvalidOperationException
+            or DllNotFoundException
+            or EntryPointNotFoundException
+            or BadImageFormatException)
         {
-            AvailabilityMessage = "NVIDIA GPU overclocking is unavailable through the supported NVAPI interface.";
+            AvailabilityMessage = ex switch
+            {
+                DllNotFoundException => "NVIDIA GPU overclocking is unavailable because the NVIDIA driver API was not found.",
+                EntryPointNotFoundException or BadImageFormatException =>
+                    "NVIDIA GPU overclocking is unavailable because the installed NVIDIA driver API is incompatible.",
+                _ => "NVIDIA GPU overclocking is unavailable through the supported NVAPI interface."
+            };
         }
 
         if (_gpu is not null)
