@@ -47,10 +47,56 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 
     public void SetFullSpeed(bool enabled)
     {
-        var value = enabled ? 1 : 0;
+        using var searcher = new ManagementObjectSearcher(
+            Scope, "SELECT * FROM LENOVO_OTHER_METHOD");
+        using var rows = searcher.Get();
+        using var method = rows.Cast<ManagementObject>()
+            .FirstOrDefault(row => Convert.ToBoolean(row["Active"] ?? true))
+            ?? throw new InvalidOperationException("Lenovo Other Mode is unavailable.");
 
-        InvokeMethod("SELECT * FROM LENOVO_OTHER_METHOD", "SetFeatureValue",
-            new Dictionary<string, object> { ["IDs"] = FanFullSpeedFeatureId, ["value"] = value });
+        var expected = enabled ? 1u : 0u;
+        var current = ReadFeatureValue(method);
+        if (current == expected)
+            return;
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            using var parameters = method.GetMethodParameters("SetFeatureValue");
+            parameters["IDs"] = FanFullSpeedFeatureId;
+            parameters["value"] = expected;
+            using var result = method.InvokeMethod("SetFeatureValue", parameters, null);
+            ValidateFeatureResult(result);
+
+            var verified = ReadFeatureValue(method);
+            if (verified == expected)
+                return;
+
+            if (attempt < 3)
+                Thread.Sleep(100);
+        }
+
+        throw new InvalidOperationException(
+            $"Lenovo full-speed feature 0x{FanFullSpeedFeatureId:X8} did not verify value {expected}.");
+    }
+
+    private static uint ReadFeatureValue(ManagementObject method)
+    {
+        using var parameters = method.GetMethodParameters("GetFeatureValue");
+        parameters["IDs"] = FanFullSpeedFeatureId;
+        using var result = method.InvokeMethod("GetFeatureValue", parameters, null);
+        if (result?.Properties["value"]?.Value is null)
+            throw new InvalidOperationException("Lenovo full-speed feature returned no value.");
+        return Convert.ToUInt32(result["value"]);
+    }
+
+    private static void ValidateFeatureResult(ManagementBaseObject? result)
+    {
+        if (result?.Properties["ReturnValue"]?.Value is null)
+            return;
+
+        var status = Convert.ToUInt32(result["ReturnValue"]);
+        if (status is not 0 and not 1)
+            throw new InvalidOperationException($"Lenovo Other Mode rejected the feature request (status {status}).");
     }
 
     public FirmwareFanTable? ReadCustomFanTable()
