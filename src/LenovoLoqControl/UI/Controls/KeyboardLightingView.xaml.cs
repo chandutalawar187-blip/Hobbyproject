@@ -311,12 +311,16 @@ public partial class KeyboardLightingView : UserControl
 
     private void RgbEffectChipChecked(object sender, RoutedEventArgs e)
     {
-        if (!_syncingDeviceState)
-        {
-            if (EffectColorCycle.IsChecked == true && ColorPickerPopup is not null)
-                ColorPickerPopup.IsOpen = false;
-            QueueRgbPreview();
-        }
+        // Checked events can fire while BAML is still assigning named fields.
+        if (!IsInitialized || _syncingDeviceState)
+            return;
+
+        if (sender is RadioButton { IsChecked: true } selected
+            && selected == EffectColorCycle
+            && ColorPickerPopup is not null)
+            ColorPickerPopup.IsOpen = false;
+
+        QueueRgbPreview();
     }
 
     private void RgbPreviewChanged(object sender, RoutedEventArgs e)
