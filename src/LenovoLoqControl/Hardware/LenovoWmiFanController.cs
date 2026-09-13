@@ -76,9 +76,17 @@ public sealed class LenovoWmiFanController : IFanController
                 // separate verified feature is required to force both fans to
                 // full duty; selecting the profile alone can remain around
                 // the normal performance-mode RPM.
-                _operations.SetFullSpeed(false);
                 _operations.SetSmartFanMode(224u);
-                _operations.SetFullSpeed(true);
+                try
+                {
+                    _operations.SetFullSpeed(true);
+                }
+                catch (Exception ex) when (ex is ManagementException or InvalidOperationException
+                    or COMException or TimeoutException)
+                {
+                    return new FanControlResult(false,
+                        $"Max Cooling mode 224 was selected, but this firmware does not expose the verified full-speed fan method: {ex.Message}");
+                }
                 return new FanControlResult(true,
                     "Maximum firmware cooling applied. Both fans are set to full speed.");
             }
