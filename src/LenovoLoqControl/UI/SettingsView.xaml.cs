@@ -1,5 +1,7 @@
 using System.IO;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,6 +15,9 @@ public partial class SettingsView : UserControl
 {
     private readonly Core.IHardwareBackend _hardware;
     private readonly LenovoVantageDisabler _imController = new();
+    private readonly UpdateService _updates = new();
+    private AppUpdateInfo? _availableUpdate;
+    private CancellationTokenSource? _updateCts;
 
     public SettingsView(Core.IHardwareBackend? hardware = null)
     {
@@ -28,7 +33,83 @@ public partial class SettingsView : UserControl
         {
             await RefreshImControllerAsync();
             await RefreshCurveAvailabilityAsync();
+            await CheckForUpdatesAsync();
         };
+        Unloaded += (_, _) => _updateCts?.Cancel();
+    }
+
+    private async void CheckUpdatesClick(object sender, RoutedEventArgs e) =>
+        await CheckForUpdatesAsync();
+
+    private async Task CheckForUpdatesAsync()
+    {
+        _updateCts?.Cancel();
+        _updateCts = new CancellationTokenSource();
+        CheckUpdatesButton.IsEnabled = false;
+        InstallUpdateButton.Visibility = Visibility.Collapsed;
+        UpdateStatus.Text = "Checking for updates…";
+        try
+        {
+            _availableUpdate = await _updates.CheckForUpdateAsync(_updateCts.Token);
+            if (_availableUpdate is null)
+            {
+                UpdateStatus.Text = $"You are up to date (v{UpdateService.CurrentVersion.ToString(3)}).";
+                return;
+            }
+
+            UpdateStatus.Text = $"Version {_availableUpdate.Version.ToString(3)} is available.";
+            InstallUpdateButton.Visibility = Visibility.Visible;
+        }
+        catch (OperationCanceledException)
+        {
+            UpdateStatus.Text = "Update check cancelled.";
+        }
+        catch (HttpRequestException ex)
+        {
+            UpdateStatus.Text = $"Unable to check for updates: {ex.Message}";
+        }
+        catch (JsonException ex)
+        {
+            UpdateStatus.Text = $"The release information was invalid: {ex.Message}";
+        }
+        finally
+        {
+            CheckUpdatesButton.IsEnabled = true;
+        }
+    }
+
+    private async void InstallUpdateClick(object sender, RoutedEventArgs e)
+    {
+        if (_availableUpdate is null)
+            return;
+
+        var update = _availableUpdate;
+        var answer = MessageBox.Show(
+            $"Download and install LOQ Control v{update.Version.ToString(3)} now?\n\nThe application will close while Windows Installer applies the update.",
+            "LOQ Control update",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (answer != MessageBoxResult.Yes)
+            return;
+
+        InstallUpdateButton.IsEnabled = false;
+        CheckUpdatesButton.IsEnabled = false;
+        UpdateProgress.Visibility = Visibility.Visible;
+        UpdateProgress.Value = 0;
+        try
+        {
+            UpdateStatus.Text = $"Downloading {update.InstallerName}…";
+            var progress = new Progress<double>(value => UpdateProgress.Value = value);
+            var installer = await _updates.DownloadInstallerAsync(update, progress, CancellationToken.None);
+            UpdateService.LaunchInstaller(installer);
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            UpdateStatus.Text = $"Update failed: {ex.Message}";
+            InstallUpdateButton.IsEnabled = true;
+            CheckUpdatesButton.IsEnabled = true;
+        }
     }
 
     private async Task RefreshCurveAvailabilityAsync()
