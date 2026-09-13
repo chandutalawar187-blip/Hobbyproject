@@ -23,7 +23,13 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _refreshingShell;
     private int _shellDensity = -1;
+    private bool _navExpanded = true;
+    private double _expandedNavWidth = 292;
     private PageKind _currentPage = PageKind.Dashboard;
+
+    private const double NavExpandedMinWidth = 280;
+    // Must fit Fan icon (height × 1.4) + rail padding + button padding.
+    private const double NavCollapsedWidth = 108;
 
     public MainWindow()
     {
@@ -35,6 +41,7 @@ public partial class MainWindow : Window
         [
             NavDashboard,
             NavFan,
+            NavLighting,
             NavProfiles,
             NavProjects,
             NavDiagnostics,
@@ -49,6 +56,7 @@ public partial class MainWindow : Window
         SelectNav(NavDashboard);
         ContentHost.Content = _dashboard;
         StatusBarPrimary.Text = "Viewing Dashboard";
+        ApplyNavExpandedState(animate: false);
 
         _shellTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
         _shellTimer.Tick += async (_, _) => await RefreshShellStatusAsync();
@@ -252,6 +260,98 @@ public partial class MainWindow : Window
             : "Live RPM/temp unavailable";
     }
 
+    private void NavToggleClick(object sender, RoutedEventArgs e)
+    {
+        _navExpanded = !_navExpanded;
+        ApplyNavExpandedState(animate: true);
+    }
+
+    private void ApplyNavExpandedState(bool animate)
+    {
+        var labelVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
+        var detailVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
+
+        BrandPanel.Visibility = detailVisibility;
+        BrandSubLabel.Visibility = detailVisibility;
+        IdentityCard.Visibility = detailVisibility;
+        HealthCard.Visibility = detailVisibility;
+
+        NavDashboardLabel.Visibility = labelVisibility;
+        NavFanLabel.Visibility = labelVisibility;
+        NavLightingLabel.Visibility = labelVisibility;
+        NavProfilesLabel.Visibility = labelVisibility;
+        NavProjects.Visibility = detailVisibility;
+        NavDiagnostics.Visibility = detailVisibility;
+        NavSettings.Visibility = detailVisibility;
+
+        // Dashboard is text-only for now — hide in icon rail until it has an animation.
+        NavDashboard.Visibility = detailVisibility;
+
+        NavFanIcon.LabelVisible = _navExpanded;
+        NavLightingIcon.LabelVisible = _navExpanded;
+        NavProfilesIcon.LabelVisible = _navExpanded;
+
+        // Collapsed rail: size icons to fit column width (Fan is wide at AspectRatio 1.4).
+        // Keep ZoomScale at 1 — values >1 crop the animation inside the view.
+        if (_navExpanded)
+        {
+            NavFanIcon.IconSize = 44d;
+            NavLightingIcon.IconSize = 40d;
+            NavProfilesIcon.IconSize = 40d;
+        }
+        else
+        {
+            // Available ≈ NavCollapsedWidth - railPad*2 - buttonPad*2
+            // 108 - 16 - 8 = 84 → Fan height = 84 / 1.4 ≈ 60, clamp for balance
+            NavFanIcon.IconSize = 48d;
+            NavLightingIcon.IconSize = 44d;
+            NavProfilesIcon.IconSize = 44d;
+        }
+
+        NavFanIcon.ZoomScale = 1d;
+        NavLightingIcon.ZoomScale = 1d;
+
+        foreach (var button in new[] { NavFan, NavLighting, NavProfiles })
+        {
+            button.HorizontalContentAlignment = _navExpanded
+                ? HorizontalAlignment.Left
+                : HorizontalAlignment.Center;
+            button.Padding = _navExpanded
+                ? new Thickness(14, 10, 14, 10)
+                : new Thickness(4, 10, 4, 10);
+            button.MinHeight = _navExpanded ? 64 : 68;
+            button.MaxWidth = _navExpanded ? double.PositiveInfinity : 92;
+        }
+
+        NavToggleButton.ToolTip = _navExpanded
+            ? "Collapse navigation"
+            : "Expand navigation";
+
+        var railPadding = _navExpanded
+            ? new Thickness(18, 24, 16, 22)
+            : new Thickness(8, 18, 8, 16);
+        var navWidth = _navExpanded ? _expandedNavWidth : NavCollapsedWidth;
+
+        NavColumn.MinWidth = _navExpanded ? NavExpandedMinWidth : NavCollapsedWidth;
+        NavColumn.MaxWidth = _navExpanded ? 340 : NavCollapsedWidth;
+
+        if (animate)
+        {
+            ResponsiveLayout.AnimateThickness(NavRail, Border.PaddingProperty, railPadding);
+            AnimateNavWidth(navWidth);
+        }
+        else
+        {
+            NavRail.Padding = railPadding;
+            NavColumn.Width = new GridLength(navWidth);
+        }
+    }
+
+    private void AnimateNavWidth(double to)
+    {
+        NavColumn.Width = new GridLength(to);
+    }
+
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
         // Compact the rail and content padding on smaller widths / effective DPI layouts.
@@ -264,32 +364,42 @@ public partial class MainWindow : Window
         if (width < 1100)
         {
             density = 0;
-            navWidth = 212;
+            navWidth = NavExpandedMinWidth;
             contentPadding = new Thickness(18, 12, 18, 8);
-            railPadding = new Thickness(14, 22, 12, 18);
+            railPadding = new Thickness(14, 20, 12, 16);
         }
         else if (width < 1400)
         {
             density = 1;
-            navWidth = 248;
+            navWidth = 292;
             contentPadding = new Thickness(28, 16, 32, 12);
-            railPadding = new Thickness(20, 28, 16, 24);
+            railPadding = new Thickness(18, 24, 16, 22);
         }
         else
         {
             density = 2;
-            navWidth = 280;
+            navWidth = 320;
             contentPadding = new Thickness(36, 18, 40, 14);
-            railPadding = new Thickness(24, 32, 18, 26);
+            railPadding = new Thickness(22, 28, 18, 24);
         }
+
+        _expandedNavWidth = navWidth;
 
         if (density == _shellDensity)
             return;
 
         _shellDensity = density;
-        NavColumn.Width = new GridLength(navWidth);
         ResponsiveLayout.AnimateThickness(ContentHostBorder, Border.PaddingProperty, contentPadding);
-        ResponsiveLayout.AnimateThickness(NavRail, Border.PaddingProperty, railPadding);
+
+        if (_navExpanded)
+        {
+            ResponsiveLayout.AnimateThickness(NavRail, Border.PaddingProperty, railPadding);
+            NavColumn.Width = new GridLength(_expandedNavWidth);
+        }
+        else
+        {
+            NavColumn.Width = new GridLength(NavCollapsedWidth);
+        }
     }
 
     protected override void OnClosed(EventArgs e)

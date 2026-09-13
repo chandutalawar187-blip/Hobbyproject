@@ -13,7 +13,7 @@
         SizeChanged="WindowSizeChanged">
   <Grid x:Name="ShellRoot">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="NavColumn" Width="248" MinWidth="200" MaxWidth="300"/>
+      <ColumnDefinition x:Name="NavColumn" Width="292" MinWidth="108" MaxWidth="340"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
@@ -22,121 +22,174 @@
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Brand -->
-        <StackPanel Grid.Row="0" Margin="4,0,4,8">
-          <TextBlock Style="{StaticResource Navigation.BrandLabel}" Text="LOQ"/>
-          <TextBlock Style="{StaticResource Navigation.BrandSubLabel}" Text="CONTROL CENTER"/>
-        </StackPanel>
+        <!-- Toggle + brand (fixed) -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <Button x:Name="NavToggleButton"
+                  Style="{StaticResource Navigation.Hamburger}"
+                  Click="NavToggleClick"
+                  ToolTip="Collapse or expand navigation"
+                  AutomationProperties.Name="Toggle navigation">
+            <StackPanel x:Name="HamburgerGlyph" Width="18" VerticalAlignment="Center">
+              <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>
+              <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>
+              <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}"/>
+            </StackPanel>
+          </Button>
+          <StackPanel x:Name="BrandPanel" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+            <TextBlock Style="{StaticResource Navigation.BrandLabel}" Text="LOQ" FontSize="28"/>
+            <TextBlock x:Name="BrandSubLabel"
+                       Style="{StaticResource Navigation.BrandSubLabel}"
+                       Text="CONTROL CENTER"
+                       Margin="2,0,0,0"/>
+          </StackPanel>
+        </Grid>
 
-        <!-- Identity -->
-        <Border Grid.Row="1" Style="{StaticResource Shell.IdentityCard}">
+        <!-- Scrollable identity + nav + health (needed when window height is short) -->
+        <ScrollViewer x:Name="NavScrollViewer"
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False"
+                      PanningMode="VerticalOnly"
+                      Focusable="False">
           <StackPanel>
-            <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM"/>
-            <TextBlock x:Name="ModelNameText"
-                       Text="Reading model…"
-                       FontSize="14"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       Margin="0,6,0,2"/>
-            <TextBlock x:Name="MachineTypeText"
-                       Style="{StaticResource Text.BodySecondary}"
-                       FontSize="12"
-                       Text="Machine type unavailable"/>
-            <Border Style="{StaticResource Badge.Mode}" Margin="0,12,0,0">
-              <TextBlock x:Name="PerformanceModeBadge"
-                         Style="{StaticResource Badge.Text}"
-                         Text="Mode not reported"/>
+            <!-- Identity -->
+            <Border x:Name="IdentityCard" Style="{StaticResource Shell.IdentityCard}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM"/>
+                <TextBlock x:Name="ModelNameText"
+                           Text="Reading model…"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,2"/>
+                <TextBlock x:Name="MachineTypeText"
+                           Style="{StaticResource Text.BodySecondary}"
+                           FontSize="12"
+                           Text="Machine type unavailable"/>
+                <Border Style="{StaticResource Badge.Mode}" Margin="0,12,0,0">
+                  <TextBlock x:Name="PerformanceModeBadge"
+                             Style="{StaticResource Badge.Text}"
+                             Text="Mode not reported"/>
+                </Border>
+              </StackPanel>
+            </Border>
+
+            <!-- Nav buttons -->
+            <StackPanel x:Name="NavButtonPanel" Margin="0,8,0,0">
+              <Button x:Name="NavDashboard"
+                      Style="{StaticResource NavigationButton}"
+                      Tag="Selected"
+                      Click="DashboardClick"
+                      ToolTip="System overview and live telemetry"
+                      AutomationProperties.Name="Dashboard"
+                      AutomationProperties.HelpText="System overview and live telemetry">
+                <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" VerticalAlignment="Center"/>
+              </Button>
+
+              <Button x:Name="NavFan"
+                      Style="{StaticResource NavigationButton}"
+                      Click="FanClick"
+                      ToolTip="Firmware fan modes, fixed speed, and curves"
+                      AutomationProperties.Name="Fan Control">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <controls:NavLottieIcon x:Name="NavFanIcon"
+                                          AssetFileName="GpuIsometric.json"
+                                          IconSize="44"
+                                          AspectRatio="1.4"
+                                          ZoomScale="1"
+                                          AutomationProperties.Name="Fan Control icon"/>
+                  <TextBlock x:Name="NavFanLabel" Text="Fan Control" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+
+              <Button x:Name="NavLighting"
+                      Style="{StaticResource NavigationButton}"
+                      Click="LightingClick"
+                      ToolTip="Keyboard backlight and RGB effects"
+                      AutomationProperties.Name="Lighting">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <controls:NavLottieIcon x:Name="NavLightingIcon"
+                                          AssetFileName="RgbCircle.json"
+                                          IconSize="40"
+                                          ZoomScale="1"
+                                          AutomationProperties.Name="Lighting icon"/>
+                  <TextBlock x:Name="NavLightingLabel" Text="Lighting" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+
+              <Button x:Name="NavProfiles"
+                      Style="{StaticResource NavigationButton}"
+                      Click="ProfilesClick"
+                      ToolTip="Quiet, Balanced, Performance, and Custom intents"
+                      AutomationProperties.Name="Profiles">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <controls:NavLottieIcon x:Name="NavProfilesIcon"
+                                          AssetFileName="TaskNav.gif"
+                                          IconSize="40"
+                                          AutomationProperties.Name="Profiles icon"/>
+                  <TextBlock x:Name="NavProfilesLabel" Text="Profiles" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+
+              <Button x:Name="NavProjects"
+                      Style="{StaticResource NavigationButton}"
+                      Click="ProjectsClick"
+                      ToolTip="Project workflows and maintenance actions"
+                      AutomationProperties.Name="Projects">
+                <TextBlock x:Name="NavProjectsLabel" Text="Projects" VerticalAlignment="Center"/>
+              </Button>
+
+              <Button x:Name="NavDiagnostics"
+                      Style="{StaticResource NavigationButton}"
+                      Click="DiagnosticsClick"
+                      ToolTip="Compatibility and capability report"
+                      AutomationProperties.Name="Diagnostics">
+                <TextBlock x:Name="NavDiagnosticsLabel" Text="Diagnostics" VerticalAlignment="Center"/>
+              </Button>
+
+              <Button x:Name="NavSettings"
+                      Style="{StaticResource NavigationButton}"
+                      Click="SettingsClick"
+                      ToolTip="Preferences and Lenovo integration"
+                      AutomationProperties.Name="Settings">
+                <TextBlock x:Name="NavSettingsLabel" Text="Settings" VerticalAlignment="Center"/>
+              </Button>
+            </StackPanel>
+
+            <!-- Health card -->
+            <Border x:Name="HealthCard" Style="{StaticResource Shell.HealthCard}" Margin="0,12,0,0">
+              <StackPanel>
+                <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM HEALTH"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                  <Ellipse x:Name="HealthDot"
+                           Style="{StaticResource Status.Dot}"
+                           Fill="{StaticResource Brush.TextSecondary}"/>
+                  <TextBlock x:Name="HealthStatusText"
+                             Text="Checking…"
+                             FontWeight="SemiBold"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock x:Name="HardwareStatus"
+                           Style="{StaticResource Text.BodySecondary}"
+                           FontSize="12"
+                           Margin="0,8,0,0"
+                           Text="Checking hardware provider…"/>
+                <TextBlock Style="{StaticResource Text.BodySecondary}"
+                           FontSize="11"
+                           Margin="0,6,0,0"
+                           Text="No unsafe hardware writes."/>
+              </StackPanel>
             </Border>
           </StackPanel>
-        </Border>
-
-        <!-- Nav buttons -->
-        <StackPanel Grid.Row="2" Margin="0,4,0,0">
-          <Button x:Name="NavDashboard"
-                  Style="{StaticResource NavigationButton}"
-                  Content="Dashboard"
-                  Tag="Selected"
-                  Click="DashboardClick"
-                  ToolTip="System overview and live telemetry"
-                  AutomationProperties.Name="Dashboard"
-                  AutomationProperties.HelpText="System overview and live telemetry"/>
-          <Button x:Name="NavFan"
-                  Style="{StaticResource NavigationButton}"
-                  Content="Fan Control"
-                  Click="FanClick"
-                  ToolTip="Firmware fan modes, fixed speed, and curves"
-                  AutomationProperties.Name="Fan Control"/>
-          <Button x:Name="NavLighting"
-                  Style="{StaticResource NavigationButton}"
-                  Click="LightingClick"
-                  ToolTip="Keyboard backlight and RGB effects"
-                  AutomationProperties.Name="Lighting">
-            <StackPanel Orientation="Horizontal">
-              <controls:NavLottieIcon AssetFileName="RgbCircle.json" IconSize="22"
-                                      AutomationProperties.Name="Lighting icon"/>
-              <TextBlock Text="Lighting" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-          <Button x:Name="NavProfiles"
-                  Style="{StaticResource NavigationButton}"
-                  Click="ProfilesClick"
-                  ToolTip="Quiet, Balanced, Performance, and Custom intents"
-                  AutomationProperties.Name="Profiles">
-            <StackPanel Orientation="Horizontal">
-              <controls:NavLottieIcon AssetFileName="Task.json" IconSize="22"
-                                      AutomationProperties.Name="Profiles icon"/>
-              <TextBlock Text="Profiles" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-          <Button x:Name="NavProjects"
-                  Style="{StaticResource NavigationButton}"
-                  Content="Projects"
-                  Click="ProjectsClick"
-                  ToolTip="Project workflows and maintenance actions"
-                  AutomationProperties.Name="Projects"/>
-          <Button x:Name="NavDiagnostics"
-                  Style="{StaticResource NavigationButton}"
-                  Content="Diagnostics"
-                  Click="DiagnosticsClick"
-                  ToolTip="Compatibility and capability report"
-                  AutomationProperties.Name="Diagnostics"/>
-          <Button x:Name="NavSettings"
-                  Style="{StaticResource NavigationButton}"
-                  Content="Settings"
-                  Click="SettingsClick"
-                  ToolTip="Preferences and Lenovo integration"
-                  AutomationProperties.Name="Settings"/>
-        </StackPanel>
-
-        <!-- Health card -->
-        <Border Grid.Row="3" Style="{StaticResource Shell.HealthCard}">
-          <StackPanel>
-            <TextBlock Style="{StaticResource Text.Caption}" Text="SYSTEM HEALTH"/>
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-              <Ellipse x:Name="HealthDot"
-                       Style="{StaticResource Status.Dot}"
-                       Fill="{StaticResource Brush.TextSecondary}"/>
-              <TextBlock x:Name="HealthStatusText"
-                         Text="Checking…"
-                         FontWeight="SemiBold"
-                         VerticalAlignment="Center"/>
-            </StackPanel>
-            <TextBlock x:Name="HardwareStatus"
-                       Style="{StaticResource Text.BodySecondary}"
-                       FontSize="12"
-                       Margin="0,8,0,0"
-                       Text="Checking hardware provider…"/>
-            <TextBlock Style="{StaticResource Text.BodySecondary}"
-                       FontSize="11"
-                       Margin="0,6,0,0"
-                       Text="No unsafe hardware writes."/>
-          </StackPanel>
-        </Border>
+        </ScrollViewer>
       </Grid>
     </Border>
 
