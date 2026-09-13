@@ -29,7 +29,9 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         var descriptiveModel = new[] { family, version, sku }
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value) &&
                 value.Contains("LOQ", StringComparison.OrdinalIgnoreCase)) ?? model;
-        var processor = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown processor";
+        var processor = ReadProcessorName()
+            ?? Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER")
+            ?? "Unknown processor";
         Identity = new HardwareIdentity(manufacturer, model, processor,
             manufacturer.Contains("Lenovo", StringComparison.OrdinalIgnoreCase) &&
             (descriptiveModel.Contains("LOQ", StringComparison.OrdinalIgnoreCase) ||
@@ -38,6 +40,22 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             Identity = Identity with { Model = descriptiveModel };
 
         _ = ReadAsync(CancellationToken.None);
+    }
+
+    private static string? ReadProcessorName()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT Name FROM Win32_Processor");
+            using var rows = searcher.Get();
+            using var row = rows.Cast<ManagementObject>()
+                .FirstOrDefault(processor => !string.IsNullOrWhiteSpace(processor["Name"] as string));
+            return row?["Name"] as string;
+        }
+        catch (ManagementException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+        catch (InvalidOperationException) { return null; }
     }
 
     public async Task<SensorReading> ReadAsync(CancellationToken cancellationToken)

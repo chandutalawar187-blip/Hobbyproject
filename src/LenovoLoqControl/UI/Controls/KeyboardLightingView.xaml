@@ -1,0 +1,573 @@
+<UserControl x:Class="LenovoLoqControl.UI.Controls.KeyboardLightingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
+             xmlns:ui="clr-namespace:LenovoLoqControl.UI"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="520"
+             d:DesignWidth="760"
+             AutomationProperties.Name="Keyboard Lighting">
+  <UserControl.Resources>
+    <Style x:Key="Keyboard.LevelButton" TargetType="Button">
+      <Setter Property="Background" Value="#12171F"/>
+      <Setter Property="Foreground" Value="#9AA8BA"/>
+      <Setter Property="BorderBrush" Value="#2A3340"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="18,12"/>
+      <Setter Property="MinWidth" Value="96"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Root"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="8"
+                    Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Root" Property="Background" Value="#1A212B"/>
+                <Setter Property="Foreground" Value="#E8EEF6"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.FocusRing}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="Keyboard.LevelButtonSelected" TargetType="Button" BasedOn="{StaticResource Keyboard.LevelButton}">
+      <Setter Property="Background" Value="#2A1214"/>
+      <Setter Property="Foreground" Value="#F4F7FB"/>
+      <Setter Property="BorderBrush" Value="#66E2231A"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Root"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True">
+              <Grid>
+                <Border Width="3"
+                        HorizontalAlignment="Left"
+                        Background="{DynamicResource Brush.Accent}"
+                        CornerRadius="8,0,0,8"
+                        Margin="-18,-12,0,-12"/>
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.FocusRing}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Sci-fi HUD tokens for the verified 4-zone RGB bay -->
+    <SolidColorBrush x:Key="Rgb.HudCyan" Color="#3AD0E8"/>
+    <SolidColorBrush x:Key="Rgb.HudCyanDim" Color="#553AD0E8"/>
+    <SolidColorBrush x:Key="Rgb.HudPanel" Color="#0A1018"/>
+    <SolidColorBrush x:Key="Rgb.HudPanelEdge" Color="#2A4A58"/>
+    <SolidColorBrush x:Key="Rgb.HudLabel" Color="#6EC8D8"/>
+    <SolidColorBrush x:Key="Rgb.HudText" Color="#D7EEF4"/>
+    <SolidColorBrush x:Key="Rgb.HudMuted" Color="#6B8490"/>
+    <SolidColorBrush x:Key="Rgb.HudChip" Color="#101820"/>
+    <SolidColorBrush x:Key="Rgb.HudChipActive" Color="#122830"/>
+    <SolidColorBrush x:Key="Rgb.HudChipEdge" Color="#355868"/>
+    <SolidColorBrush x:Key="Rgb.HudChipActiveEdge" Color="#3AD0E8"/>
+
+    <Style x:Key="Rgb.Caption" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Rgb.HudLabel}"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="Rgb.EffectChip" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{StaticResource Rgb.HudMuted}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Chip"
+                    Background="{StaticResource Rgb.HudChip}"
+                    BorderBrush="{StaticResource Rgb.HudChipEdge}"
+                    BorderThickness="1"
+                    CornerRadius="2"
+                    Padding="14,10"
+                    MinWidth="88"
+                    SnapsToDevicePixels="True">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Rectangle x:Name="Pip" Width="6" Height="6" Margin="0,0,8,0"
+                           Fill="{StaticResource Rgb.HudCyanDim}"
+                           VerticalAlignment="Center"/>
+                <ContentPresenter VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Rgb.HudCyan}"/>
+                <Setter Property="Foreground" Value="{StaticResource Rgb.HudText}"/>
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Chip" Property="Background" Value="{StaticResource Rgb.HudChipActive}"/>
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Rgb.HudChipActiveEdge}"/>
+                <Setter TargetName="Pip" Property="Fill" Value="{StaticResource Rgb.HudCyan}"/>
+                <Setter Property="Foreground" Value="{StaticResource Rgb.HudText}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="Rgb.Field" TargetType="TextBox">
+      <Setter Property="Background" Value="#0C141C"/>
+      <Setter Property="Foreground" Value="{StaticResource Rgb.HudText}"/>
+      <Setter Property="CaretBrush" Value="{StaticResource Rgb.HudCyan}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Rgb.HudChipEdge}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="FontFamily" Value="Consolas"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="Bd"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="2"
+                    Padding="{TemplateBinding Padding}">
+              <ScrollViewer x:Name="PART_ContentHost" Focusable="False"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Rgb.HudCyan}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="Rgb.ApplyButton" TargetType="Button">
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Padding" Value="18,14"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Root"
+                    Background="#C81E18"
+                    BorderBrush="#FF6B63"
+                    BorderThickness="1"
+                    CornerRadius="2"
+                    Padding="{TemplateBinding Padding}">
+              <Grid>
+                <Border HorizontalAlignment="Left" Width="3" Background="#3AD0E8" Margin="-18,-14,0,-14"/>
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Root" Property="Background" Value="#E2231A"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <Border x:Name="RootCard" Style="{DynamicResource Card.Metric}" Margin="0,0,0,16" Padding="22,20">
+    <StackPanel>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel>
+          <TextBlock x:Name="TitleText"
+                     Style="{DynamicResource Text.Subtitle}"
+                     Text="Keyboard Lighting"/>
+          <TextBlock x:Name="AvailabilityText"
+                     Style="{DynamicResource Text.BodySecondary}"
+                     Margin="0,6,0,0"
+                     TextWrapping="Wrap"
+                     Text="Checking keyboard lighting…"/>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+          <Border x:Name="TypeBadge" Style="{DynamicResource Badge.Mode}" Margin="0,0,10,0" VerticalAlignment="Center">
+            <TextBlock x:Name="TypeBadgeText"
+                       Style="{DynamicResource Badge.Text}"
+                       Text="Detecting…"/>
+          </Border>
+          <Button x:Name="RefreshButton"
+                  Content="Refresh"
+                  Style="{DynamicResource Button.Ghost}"
+                  Padding="14,8"
+                  Click="RefreshClick"
+                  ToolTip="Re-read keyboard lighting status from the Lenovo provider"
+                  AutomationProperties.Name="Refresh keyboard lighting"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Keyboard silhouette (LOQ JIS reference) -->
+      <controls:KeyboardLayoutVisual x:Name="KeyboardPreview"
+                                     Margin="0,16,0,0"
+                                     Visibility="Collapsed"/>
+
+      <!-- White backlit controls -->
+      <StackPanel x:Name="WhitePanel" Margin="0,14,0,0" Visibility="Collapsed">
+        <TextBlock Style="{DynamicResource Text.Caption}"
+                   Foreground="#6B7A8D"
+                   Text="BRIGHTNESS"
+                   Margin="0,0,0,10"/>
+        <UniformGrid Columns="3" Margin="0,0,0,12"
+                     ui:ResponsiveLayout.AdaptiveColumns="True"
+                     ui:ResponsiveLayout.WideColumns="3"
+                     ui:ResponsiveLayout.NarrowColumns="1"
+                     ui:ResponsiveLayout.Breakpoint="520">
+          <Button x:Name="LevelOff"
+                  Content="Off"
+                  Style="{DynamicResource Keyboard.LevelButton}"
+                  Margin="0,0,8,0"
+                  Click="LevelOffClick"
+                  AutomationProperties.Name="Keyboard lighting Off"
+                  ToolTip="Turn keyboard backlight off"/>
+          <Button x:Name="LevelLow"
+                  Content="Low"
+                  Style="{DynamicResource Keyboard.LevelButton}"
+                  Margin="4,0"
+                  Click="LevelLowClick"
+                  AutomationProperties.Name="Keyboard lighting Low"
+                  ToolTip="Set keyboard backlight to low"/>
+          <Button x:Name="LevelHigh"
+                  Content="High"
+                  Style="{DynamicResource Keyboard.LevelButton}"
+                  Margin="8,0,0,0"
+                  Click="LevelHighClick"
+                  AutomationProperties.Name="Keyboard lighting High"
+                  ToolTip="Set keyboard backlight to high"/>
+        </UniformGrid>
+        <TextBlock x:Name="CurrentLevelText"
+                   Style="{DynamicResource Text.BodySecondary}"
+                   Text="Current level · Unknown"/>
+      </StackPanel>
+
+      <!-- Sci-fi 4-zone RGB command bay -->
+      <Border x:Name="RgbInfoPanel"
+              Margin="0,18,0,0"
+              Padding="0"
+              Visibility="Collapsed"
+              Background="{StaticResource Rgb.HudPanel}"
+              BorderBrush="{StaticResource Rgb.HudPanelEdge}"
+              BorderThickness="1"
+              CornerRadius="4"
+              ClipToBounds="False">
+        <Grid>
+          <!-- Soft cyan wash -->
+          <Border CornerRadius="4" IsHitTestVisible="False">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#143AD0E8" Offset="0"/>
+                <GradientStop Color="#00000000" Offset="0.45"/>
+                <GradientStop Color="#22E2231A" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+          </Border>
+
+          <!-- Corner brackets -->
+          <Grid IsHitTestVisible="False">
+            <Path HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,8,0,0"
+                  Stroke="{StaticResource Rgb.HudCyan}" StrokeThickness="1.5" Opacity="0.85"
+                  Data="M 0,18 L 0,0 L 18,0"/>
+            <Path HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                  Stroke="{StaticResource Rgb.HudCyan}" StrokeThickness="1.5" Opacity="0.85"
+                  Data="M 18,18 L 18,0 L 0,0"/>
+            <Path HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8,0,0,8"
+                  Stroke="{StaticResource Rgb.HudCyan}" StrokeThickness="1.5" Opacity="0.55"
+                  Data="M 0,0 L 0,18 L 18,18"/>
+            <Path HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,8"
+                  Stroke="{StaticResource Rgb.HudCyan}" StrokeThickness="1.5" Opacity="0.55"
+                  Data="M 18,0 L 18,18 L 0,18"/>
+          </Grid>
+
+          <StackPanel Margin="20,18,20,18">
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="RGB COMMAND LINK"
+                           Style="{StaticResource Rgb.Caption}"/>
+                <TextBlock x:Name="RgbHeadline"
+                           Foreground="{StaticResource Rgb.HudText}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,4,0,0"
+                           Text="4-zone RGB keyboard detected"/>
+                <TextBlock x:Name="RgbDetail"
+                           Foreground="{StaticResource Rgb.HudMuted}"
+                           FontSize="12"
+                           Margin="0,6,0,0"
+                           TextWrapping="Wrap"
+                           Text="Apply verified 4-zone RGB effects to the keyboard."/>
+              </StackPanel>
+              <Border Grid.Column="1"
+                      BorderBrush="{StaticResource Rgb.HudCyanDim}"
+                      BorderThickness="1"
+                      Background="#121C24"
+                      Padding="10,6"
+                      VerticalAlignment="Top"
+                      CornerRadius="2">
+                <TextBlock x:Name="RgbLinkStatus"
+                           Text="LINK · READY"
+                           Foreground="{StaticResource Rgb.HudCyan}"
+                           FontSize="10"
+                           FontWeight="SemiBold"/>
+              </Border>
+            </Grid>
+
+            <TextBlock x:Name="RgbInfoBody"
+                       Foreground="{StaticResource Rgb.HudMuted}"
+                       FontSize="11"
+                       Margin="0,0,0,14"
+                       TextWrapping="Wrap"
+                       Text=""/>
+
+            <StackPanel x:Name="RgbEffectPanel">
+              <TextBlock Style="{StaticResource Rgb.Caption}" Text="EFFECT MATRIX" Margin="0,0,0,10"/>
+              <WrapPanel>
+                <RadioButton x:Name="EffectOff" GroupName="RgbEffect" Content="Off"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbEffectChipChecked"
+                             AutomationProperties.Name="RGB effect Off"/>
+                <RadioButton x:Name="EffectStatic" GroupName="RgbEffect" Content="Static" IsChecked="True"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbEffectChipChecked"
+                             AutomationProperties.Name="RGB effect Static"/>
+                <RadioButton x:Name="EffectBreathing" GroupName="RgbEffect" Content="Breathing"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbEffectChipChecked"
+                             AutomationProperties.Name="RGB effect Breathing"/>
+                <RadioButton x:Name="EffectColorCycle" GroupName="RgbEffect" Content="Color Cycle"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbEffectChipChecked"
+                             AutomationProperties.Name="RGB effect Color Cycle"/>
+                <RadioButton x:Name="EffectWave" GroupName="RgbEffect" Content="Wave"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbEffectChipChecked"
+                             AutomationProperties.Name="RGB effect Wave"/>
+              </WrapPanel>
+
+              <Grid x:Name="RgbColorSpeedGrid" Margin="0,6,0,14" SizeChanged="RgbColorSpeedGridSizeChanged">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition x:Name="RgbColorColumn" Width="*"/>
+                  <ColumnDefinition x:Name="RgbColorSpeedGap" Width="16"/>
+                  <ColumnDefinition Width="1.1*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition x:Name="RgbColorSpeedRowGap" Height="0"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel x:Name="RgbColorPanel">
+                  <TextBlock Style="{StaticResource Rgb.Caption}" Text="SIGNAL COLOR"/>
+                  <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="44"/>
+                      <ColumnDefinition Width="10"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="RgbColorSwatchButton"
+                            Width="44" Height="36"
+                            Cursor="Hand"
+                            Click="OpenColorPickerClick"
+                            ToolTip="Open color picker"
+                            AutomationProperties.Name="Open color picker"
+                            FocusVisualStyle="{x:Null}">
+                      <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                          <Border x:Name="SwatchChrome"
+                                  CornerRadius="2"
+                                  BorderBrush="{StaticResource Rgb.HudCyanDim}"
+                                  BorderThickness="1"
+                                  Background="{TemplateBinding Background}">
+                            <Border Width="10" Height="10"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                    Margin="0,0,4,4"
+                                    Background="#22121820"
+                                    BorderBrush="{StaticResource Rgb.HudCyan}"
+                                    BorderThickness="1"
+                                    CornerRadius="1"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                              <Setter TargetName="SwatchChrome" Property="BorderBrush" Value="{StaticResource Rgb.HudCyan}"/>
+                            </Trigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Button.Template>
+                      <Button.Background>
+                        <SolidColorBrush Color="#FFFFFF"/>
+                      </Button.Background>
+                    </Button>
+                    <Popup x:Name="ColorPickerPopup"
+                           PlacementTarget="{Binding ElementName=RgbColorSwatchButton}"
+                           Placement="Bottom"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           PopupAnimation="Fade"
+                           VerticalOffset="8"
+                           HorizontalOffset="-8">
+                      <controls:RgbColorPickerControl x:Name="ColorPicker"
+                                                      ColorChanged="ColorPickerColorChanged"/>
+                    </Popup>
+                    <TextBox x:Name="RgbColorText"
+                             Grid.Column="2"
+                             Style="{StaticResource Rgb.Field}"
+                             Text="#FFFFFF"
+                             MaxLength="7"
+                             TextChanged="RgbPreviewChanged"
+                             ToolTip="Color in #RRGGBB"
+                             AutomationProperties.Name="RGB color hex"/>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel x:Name="RgbSpeedPanel" Grid.Column="2">
+                  <Grid>
+                    <TextBlock Style="{StaticResource Rgb.Caption}" Text="PULSE SPEED · 4 LEVELS (ANIMATED MODES)"/>
+                    <TextBlock x:Name="RgbSpeedValue"
+                               HorizontalAlignment="Right"
+                               Foreground="{StaticResource Rgb.HudCyan}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Text="03"/>
+                  </Grid>
+                  <Slider x:Name="RgbSpeedSlider"
+                          Minimum="1" Maximum="4" Value="3"
+                          TickFrequency="1" IsSnapToTickEnabled="True"
+                          Margin="0,10,0,0"
+                          ValueChanged="RgbPreviewChanged"
+                          AutomationProperties.Name="RGB effect speed"/>
+                </StackPanel>
+              </Grid>
+
+              <StackPanel x:Name="RgbBrightnessPanel" Orientation="Horizontal" Margin="0,0,0,14">
+                <TextBlock Style="{StaticResource Rgb.Caption}" Text="BRIGHTNESS" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <RadioButton x:Name="RgbBrightnessLow" Content="Low" GroupName="RgbBrightness"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbPreviewChanged"/>
+                <RadioButton x:Name="RgbBrightnessHigh" Content="High" GroupName="RgbBrightness"
+                             Style="{StaticResource Rgb.EffectChip}" IsChecked="True" Checked="RgbPreviewChanged"/>
+              </StackPanel>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center"
+                           Foreground="{StaticResource Rgb.HudMuted}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Text="Live preview updates on the keyboard above. Apply commits the effect to firmware."/>
+                <Button x:Name="RgbApplyButton"
+                        Grid.Column="1"
+                        Content="APPLY SIGNAL"
+                        Style="{StaticResource Rgb.ApplyButton}"
+                        MinWidth="160"
+                        Margin="16,0,0,0"
+                        Click="ApplyRgbClick"
+                        AutomationProperties.Name="Apply RGB effect"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Coming-later / unknown RGB message surface (non-4-zone) -->
+      <Border x:Name="RgbComingLaterPanel"
+              Style="{DynamicResource Card.Unavailable}"
+              Margin="0,18,0,0"
+              Padding="16"
+              Visibility="Collapsed"
+              IsHitTestVisible="False">
+        <StackPanel>
+          <TextBlock x:Name="RgbComingLaterHeadline"
+                     Style="{DynamicResource Text.Subtitle}"
+                     FontSize="15"
+                     Text="RGB keyboard detected"/>
+          <TextBlock x:Name="RgbComingLaterDetail"
+                     Style="{DynamicResource Text.BodySecondary}"
+                     Margin="0,6,0,0"
+                     TextWrapping="Wrap"
+                     Text=""/>
+        </StackPanel>
+      </Border>
+
+      <!-- Unsupported -->
+      <Border x:Name="UnsupportedPanel"
+              Style="{DynamicResource Card.Unavailable}"
+              Margin="0,18,0,0"
+              Padding="16"
+              Visibility="Collapsed">
+        <StackPanel>
+          <TextBlock Style="{DynamicResource Text.Subtitle}"
+                     FontSize="15"
+                     Text="Keyboard lighting unavailable"/>
+          <TextBlock x:Name="UnsupportedDetail"
+                     Style="{DynamicResource Text.BodySecondary}"
+                     Margin="0,6,0,0"
+                     TextWrapping="Wrap"
+                     Text=""/>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="StatusBanner"
+              Style="{DynamicResource Badge.Neutral}"
+              Margin="0,16,0,0"
+              Padding="14,8">
+        <TextBlock x:Name="StatusText"
+                   Style="{DynamicResource Badge.Text}"
+                   TextWrapping="Wrap"
+                   Text="Ready."/>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

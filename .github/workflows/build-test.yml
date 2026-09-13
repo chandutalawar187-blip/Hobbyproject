@@ -1,0 +1,27 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      - name: Restore
+        run: dotnet restore LenovoLoqControl.sln
+      - name: Build x64
+        run: dotnet build LenovoLoqControl.sln --no-restore --configuration Release -p:Platform=x64
+      - name: Test
+        run: dotnet test tests\LenovoLoqControl.Tests\LenovoLoqControl.Tests.csproj --no-build --configuration Release

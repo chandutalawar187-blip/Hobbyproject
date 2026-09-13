@@ -9,7 +9,7 @@
       <Border Style="{StaticResource Panel.Section}">
         <StackPanel x:Name="CapabilityList"/>
       </Border>
-      <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
+      <StackPanel x:Name="DiagnosticsActions" Orientation="Horizontal" Margin="0,8,0,12">
         <Button Content="Export diagnostic report" Style="{StaticResource Button.Primary}" Click="ExportClick" Margin="0,0,10,0"/>
         <Button Content="Copy technical details" Click="CopyClick" Margin="0"/>
       </StackPanel>

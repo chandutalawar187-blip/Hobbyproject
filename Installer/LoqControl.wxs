@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="LOQ Control"
+           Manufacturer="LOQ Control"
+           Version="1.0.0"
+           UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
+           Scope="perMachine">
+    <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of LOQ Control is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainFeature" Title="LOQ Control" Level="1">
+      <ComponentRef Id="ApplicationComponent" />
+      <ComponentRef Id="StartMenuComponent" />
+      <ComponentGroupRef Id="AssetComponents" />
+      <ComponentGroupRef Id="AssetImageComponents" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="LOQ Control">
+        <Directory Id="AssetsFolder" Name="Assets">
+          <Directory Id="AssetImagesFolder" Name="i" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="LOQ Control" />
+    </StandardDirectory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="ApplicationComponent" Guid="*">
+        <File Id="LoqControlExe"
+              Source="$(var.PublishDir)\LoqControl.exe"
+              KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ApplicationProgramsFolder"
+                    Name="LOQ Control"
+                    Description="Lenovo LOQ control center"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Advertise="yes" />
+        </File>
+        <RegistryValue Root="HKLM"
+                       Key="Software\LOQ Control"
+                       Name="InstallPath"
+                       Type="string"
+                       Value="[INSTALLFOLDER]"
+                       KeyPath="no" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuComponent" Guid="*">
+        <RemoveFile Id="RemoveStartMenuFiles" Name="*" On="uninstall" />
+        <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\LOQ Control"
+                       Name="StartMenuComponent"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+  </Package>
+
+  <Fragment>
+      <ComponentGroup Id="AssetComponents" Directory="AssetsFolder">
+        <Component Id="GpuIsometricAsset" Guid="*">
+          <File Source="$(var.PublishDir)\Assets\GpuIsometric.json" KeyPath="yes" />
+        </Component>
+        <Component Id="RgbCircleAsset" Guid="*">
+          <File Source="$(var.PublishDir)\Assets\RgbCircle.json" KeyPath="yes" />
+        </Component>
+        <Component Id="TaskAsset" Guid="*">
+          <File Source="$(var.PublishDir)\Assets\Task.json" KeyPath="yes" />
+        </Component>
+        <Component Id="TaskNavAsset" Guid="*">
+          <File Source="$(var.PublishDir)\Assets\TaskNav.gif" KeyPath="yes" />
+        </Component>
+      </ComponentGroup>
+
+      <ComponentGroup Id="AssetImageComponents" Directory="AssetImagesFolder">
+        <Component Id="AssetImage0" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_0.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage1" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_1.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage2" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_2.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage3" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_3.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage4" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_4.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage5" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_5.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage6" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_6.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage7" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_7.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage8" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_8.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage9" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_9.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage10" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_10.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage11" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_11.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage12" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_12.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage13" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_13.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage14" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_14.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage15" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_15.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage16" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_16.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage17" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_17.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage18" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_18.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage19" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_19.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage20" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_20.png" KeyPath="yes" /></Component>
+        <Component Id="AssetImage21" Guid="*"><File Source="$(var.PublishDir)\Assets\i\image_21.png" KeyPath="yes" /></Component>
+      </ComponentGroup>
+  </Fragment>
+</Wix>

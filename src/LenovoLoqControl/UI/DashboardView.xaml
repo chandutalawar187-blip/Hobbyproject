@@ -49,40 +49,56 @@
       </Border>
 
       <!-- Primary cards -->
-      <UniformGrid Columns="3" Margin="0,4,0,8">
+      <UniformGrid x:Name="PrimaryMetricsGrid" Columns="3" Margin="0,4,0,8"
+                   ui:ResponsiveLayout.AdaptiveColumns="True"
+                   ui:ResponsiveLayout.WideColumns="3"
+                   ui:ResponsiveLayout.NarrowColumns="1"
+                   ui:ResponsiveLayout.Breakpoint="1180">
         <!-- CPU -->
-        <Border Style="{StaticResource Card.Metric}">
+        <Border Style="{StaticResource Card.Metric}" MinWidth="220" Padding="16">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*" MinWidth="88"/>
               <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel>
+            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
               <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="CPU"/>
-              <TextBlock x:Name="CpuTempText" Style="{StaticResource Text.Metric}" Text="—"/>
-              <TextBlock x:Name="CpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="Utilization · Loading"/>
-              <TextBlock x:Name="CpuClockText" Style="{StaticResource Dash.MetricMuted}" Text="Clock · Loading"/>
-              <TextBlock x:Name="CpuThermalText" Style="{StaticResource Dash.MetricMuted}" Text="Thermal · Loading"/>
+              <TextBlock x:Name="CpuTempText" Style="{StaticResource Text.Subtitle}" Margin="0,2,0,0" Text="—"/>
+              <TextBlock x:Name="CpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,8,0,0"
+                         Text="Utilization · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="CpuClockText" Style="{StaticResource Dash.MetricMuted}"
+                         Text="Clock · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="CpuThermalText" Style="{StaticResource Dash.MetricMuted}"
+                         Text="Thermal · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
-            <controls:TemperatureRing x:Name="CpuRing" Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"/>
+            <controls:TemperatureRing x:Name="CpuRing" Grid.Column="1"
+                                      Width="88" Height="88"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,2,0"/>
           </Grid>
         </Border>
 
         <!-- GPU -->
-        <Border Style="{StaticResource Card.Metric}">
+        <Border Style="{StaticResource Card.Metric}" MinWidth="220" Padding="16">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*" MinWidth="88"/>
               <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel>
+            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
               <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="GPU"/>
-              <TextBlock x:Name="GpuTempText" Style="{StaticResource Text.Metric}" Text="—"/>
-              <TextBlock x:Name="GpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="Utilization · Loading"/>
-              <TextBlock x:Name="GpuClockText" Style="{StaticResource Dash.MetricMuted}" Text="Clock · Loading"/>
-              <TextBlock x:Name="GpuThermalText" Style="{StaticResource Dash.MetricMuted}" Text="Thermal · Loading"/>
+              <TextBlock x:Name="GpuTempText" Style="{StaticResource Text.Subtitle}" Margin="0,2,0,0" Text="—"/>
+              <TextBlock x:Name="GpuUtilText" Style="{StaticResource Dash.MetricValue}" Margin="0,8,0,0"
+                         Text="Utilization · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="GpuClockText" Style="{StaticResource Dash.MetricMuted}"
+                         Text="Clock · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="GpuThermalText" Style="{StaticResource Dash.MetricMuted}"
+                         Text="Thermal · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
-            <controls:TemperatureRing x:Name="GpuRing" Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"/>
+            <controls:TemperatureRing x:Name="GpuRing" Grid.Column="1"
+                                      Width="88" Height="88"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,2,0"/>
           </Grid>
         </Border>
 
@@ -90,53 +106,73 @@
         <Border Style="{StaticResource Card.Metric}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="COOLING"/>
-            <TextBlock x:Name="CoolingHeadline" Style="{StaticResource Text.Metric}" FontSize="28" Text="—"/>
-            <TextBlock x:Name="CpuFanText" Style="{StaticResource Dash.MetricValue}" Margin="0,10,0,0" Text="CPU fan · Loading"/>
-            <TextBlock x:Name="GpuFanText" Style="{StaticResource Dash.MetricMuted}" Text="GPU fan · Loading"/>
-            <TextBlock x:Name="FanModeText" Style="{StaticResource Dash.MetricMuted}" Text="Fan mode · Loading"/>
-            <TextBlock x:Name="FanAvailabilityText" Style="{StaticResource Dash.MetricMuted}" Text="Control · Loading"/>
+            <TextBlock x:Name="CoolingHeadline" Style="{StaticResource Text.Subtitle}" Margin="0,2,0,0" Text="—"/>
+            <TextBlock x:Name="CpuFanText" Style="{StaticResource Dash.MetricValue}" Margin="0,8,0,0"
+                       Text="CPU fan · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="GpuFanText" Style="{StaticResource Dash.MetricMuted}"
+                       Text="GPU fan · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="FanModeText" Style="{StaticResource Dash.MetricMuted}"
+                       Text="Fan mode · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="FanAvailabilityText" Style="{StaticResource Dash.MetricMuted}"
+                       Text="Control · Loading" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
           </StackPanel>
         </Border>
       </UniformGrid>
 
       <!-- Secondary cards -->
-      <UniformGrid Columns="3" Margin="0,0,0,8">
+      <UniformGrid Columns="3" Margin="0,0,0,8"
+                   ui:ResponsiveLayout.AdaptiveColumns="True"
+                   ui:ResponsiveLayout.WideColumns="3"
+                   ui:ResponsiveLayout.NarrowColumns="1"
+                   ui:ResponsiveLayout.Breakpoint="1180">
         <Border Style="{StaticResource Card.Compact}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="MEMORY"/>
             <TextBlock x:Name="MemoryText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
-            <TextBlock Style="{StaticResource Dash.MetricMuted}" Text="Physical memory in use"/>
+            <TextBlock Style="{StaticResource Dash.MetricMuted}" Text="Physical memory in use"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
         <Border Style="{StaticResource Card.Compact}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="BATTERY"/>
             <TextBlock x:Name="BatteryText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
-            <TextBlock x:Name="ChargingText" Style="{StaticResource Dash.MetricMuted}" Text="Charge state · Loading"/>
+            <TextBlock x:Name="ChargingText" Style="{StaticResource Dash.MetricMuted}" Text="Charge state · Loading"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
         <Border Style="{StaticResource Card.Compact}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="POWER"/>
             <TextBlock x:Name="PowerText" Style="{StaticResource Text.Subtitle}" Text="Unavailable"/>
-            <TextBlock Style="{StaticResource Dash.MetricMuted}" Text="CPU/GPU power is not exposed by the current provider"/>
+            <TextBlock Style="{StaticResource Dash.MetricMuted}"
+                       Text="CPU/GPU power is not exposed by the current provider"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
       </UniformGrid>
 
-      <UniformGrid Columns="2" Margin="0,0,0,8">
+      <UniformGrid Columns="2" Margin="0,0,0,8"
+                   ui:ResponsiveLayout.AdaptiveColumns="True"
+                   ui:ResponsiveLayout.WideColumns="2"
+                   ui:ResponsiveLayout.NarrowColumns="1"
+                   ui:ResponsiveLayout.Breakpoint="820">
         <Border Style="{StaticResource Card.Compact}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="PROVIDER STATUS"/>
-            <TextBlock x:Name="ProviderStatusText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
-            <TextBlock x:Name="ProviderDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"/>
+            <TextBlock x:Name="ProviderStatusText" Style="{StaticResource Text.Subtitle}" Text="Loading"
+                       TextWrapping="Wrap"/>
+            <TextBlock x:Name="ProviderDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
         <Border Style="{StaticResource Card.Compact}">
           <StackPanel>
             <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="LENOVO INTEGRATION"/>
-            <TextBlock x:Name="IntegrationText" Style="{StaticResource Text.Subtitle}" Text="Loading"/>
-            <TextBlock x:Name="IntegrationDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"/>
+            <TextBlock x:Name="IntegrationText" Style="{StaticResource Text.Subtitle}" Text="Loading"
+                       TextWrapping="Wrap"/>
+            <TextBlock x:Name="IntegrationDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
       </UniformGrid>

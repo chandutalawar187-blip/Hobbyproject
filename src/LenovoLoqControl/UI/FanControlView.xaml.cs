@@ -28,6 +28,9 @@ public partial class FanControlView : UserControl
     private Slider? _fixedSpeedSlider;
     private Button? _selectedModeButton;
     private bool _refreshing;
+    private bool _appMaxCoolingActive;
+    private bool _telemetryStacked;
+    private bool _modeStripStacked;
     private readonly DropShadowEffect _modeButtonGlow = new()
     {
         BlurRadius = 16,
@@ -36,19 +39,14 @@ public partial class FanControlView : UserControl
         RenderingBias = RenderingBias.Performance
     };
     private static readonly CubicEase ModeAccentEase = new() { EasingMode = EasingMode.EaseInOut };
+    private const double TelemetryStackBreakpoint = 900;
+    private const double ModeStripStackBreakpoint = 820;
 
     public FanControlView(IHardwareBackend? hardware = null)
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
-
-        var identity = _hardware.Monitor.Identity;
         var supported = _hardware.FanController.IsSupported;
-        CapabilityTitle.Text = supported ? "Firmware fan modes available" : "Fan control unavailable";
-        CapabilityDetail.Text = supported
-            ? $"Model {identity.Model}: Silent, Automatic, Performance, Max Cooling, live RPM, and firmware custom curves are available when the Lenovo provider permits them."
-            : $"Model {identity.Model}: {_hardware.FanController.AvailabilityMessage}";
-        CapabilityBanner.Style = (Style)FindResource(supported ? "Card.SuccessBanner" : "Card.Warning");
 
         StatusText.Text = supported
             ? "Ready. No command has been sent yet."
@@ -63,6 +61,7 @@ public partial class FanControlView : UserControl
         _liveTimer.Tick += async (_, _) => await RefreshLiveReadingsAsync();
         Loaded += async (_, _) =>
         {
+            AdaptTelemetryLayout(TelemetryModules.ActualWidth);
             PlayTelemetrySectionEnter();
             ApplyTelemetryAccent(FanMode.Quiet);
             _liveTimer.Start();
@@ -77,6 +76,137 @@ public partial class FanControlView : UserControl
             _modeButtonGlow.BeginAnimation(DropShadowEffect.OpacityProperty, null);
             _modeButtonGlow.BeginAnimation(DropShadowEffect.ColorProperty, null);
         };
+    }
+
+    private void TelemetryModulesSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.NewSize.Width <= 0)
+            return;
+        AdaptTelemetryLayout(e.NewSize.Width);
+        AdaptModeStripLayout(e.NewSize.Width);
+    }
+
+    /// <summary>
+    /// Narrow windows stack CPU/RAM/GPU so labels stay readable; wide keeps the 3-up row.
+    /// Layout flips are cross-faded so resize feels continuous.
+    /// </summary>
+    private void AdaptTelemetryLayout(double width)
+    {
+        if (TelemetryModules is null || CpuModule is null || RamModule is null || GpuModule is null)
+            return;
+        if (width <= 0)
+            return;
+
+        var stack = width < TelemetryStackBreakpoint;
+        if (stack == _telemetryStacked)
+            return;
+
+        _telemetryStacked = stack;
+        ResponsiveLayout.Transition(TelemetryModules, () => ApplyTelemetryStack(stack), TelemetryModules);
+    }
+
+    private void ApplyTelemetryStack(bool stack)
+    {
+        if (stack)
+        {
+            TelemetryGap1.Width = new GridLength(0);
+            TelemetryGap2.Width = new GridLength(0);
+            TelemetryRowGap1.Height = new GridLength(14);
+            TelemetryRowGap2.Height = new GridLength(14);
+
+            Grid.SetColumn(CpuModule, 0);
+            Grid.SetRow(CpuModule, 0);
+            Grid.SetColumnSpan(CpuModule, 5);
+
+            Grid.SetColumn(RamModule, 0);
+            Grid.SetRow(RamModule, 2);
+            Grid.SetColumnSpan(RamModule, 5);
+
+            Grid.SetColumn(GpuModule, 0);
+            Grid.SetRow(GpuModule, 4);
+            Grid.SetColumnSpan(GpuModule, 5);
+        }
+        else
+        {
+            TelemetryGap1.Width = new GridLength(20);
+            TelemetryGap2.Width = new GridLength(20);
+            TelemetryRowGap1.Height = new GridLength(0);
+            TelemetryRowGap2.Height = new GridLength(0);
+
+            Grid.SetColumn(CpuModule, 0);
+            Grid.SetRow(CpuModule, 0);
+            Grid.SetColumnSpan(CpuModule, 1);
+
+            Grid.SetColumn(RamModule, 2);
+            Grid.SetRow(RamModule, 0);
+            Grid.SetColumnSpan(RamModule, 1);
+
+            Grid.SetColumn(GpuModule, 4);
+            Grid.SetRow(GpuModule, 0);
+            Grid.SetColumnSpan(GpuModule, 1);
+        }
+    }
+
+    private void AdaptModeStripLayout(double width)
+    {
+        if (ModePanel is null)
+            return;
+
+        var stack = width < ModeStripStackBreakpoint;
+        if (stack == _modeStripStacked)
+            return;
+
+        _modeStripStacked = stack;
+        ResponsiveLayout.Transition(ModePanel, () => ApplyModeStripStack(stack), ModePanel);
+    }
+
+    private void ApplyModeStripStack(bool stack)
+    {
+        var buttons = new (FrameworkElement Element, int WideColumn)[]
+        {
+            (ModeSilent, 0),
+            (ModeAuto, 2),
+            (ModePerformance, 4),
+            (ModeMaxCooling, 6),
+            (ModeCustom, 8)
+        };
+
+        foreach (UIElement child in ModePanel.Children)
+        {
+            if (child is not FrameworkElement fe)
+                continue;
+            var col = Grid.GetColumn(fe);
+            if (col is 1 or 3 or 5 or 7)
+                fe.Visibility = stack ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        EnsureModeStripRows(stack ? 3 : 1);
+
+        for (var i = 0; i < buttons.Length; i++)
+        {
+            var (element, wideColumn) = buttons[i];
+            if (stack)
+            {
+                Grid.SetRow(element, i / 2);
+                Grid.SetColumn(element, (i % 2) * 4);
+                Grid.SetColumnSpan(element, 3);
+            }
+            else
+            {
+                Grid.SetRow(element, 0);
+                Grid.SetColumn(element, wideColumn);
+                Grid.SetColumnSpan(element, 1);
+            }
+        }
+    }
+
+    private void EnsureModeStripRows(int rowCount)
+    {
+        while (ModePanel.RowDefinitions.Count < rowCount)
+            ModePanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        for (var i = 0; i < ModePanel.RowDefinitions.Count; i++)
+            ModePanel.RowDefinitions[i].Height = i < rowCount ? GridLength.Auto : new GridLength(0);
     }
 
     private void PlayTelemetrySectionEnter()
@@ -449,7 +579,10 @@ public partial class FanControlView : UserControl
                 message += " Safety minimums apply at 85°C and above.";
             ShowResult(message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -488,7 +621,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanCurveAsync(curve, CancellationToken.None);
             ShowResult(result.Accepted ? result.Message : $"Curve was not applied. {result.Message}", result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -524,7 +660,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanCurveAsync(curve, CancellationToken.None);
             ShowResult(result.Accepted ? result.Message : $"Curve was not applied. {result.Message}", result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = false;
                 HighlightMode(ModeCustom);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -553,6 +692,7 @@ public partial class FanControlView : UserControl
     private void ModeCustomClick(object sender, RoutedEventArgs e)
     {
         if (!ModeCustom.IsEnabled) return;
+        _appMaxCoolingActive = false;
         HighlightMode(ModeCustom);
         ShowResult("Custom selected. Edit the curve below, then Apply curve to send it to firmware.", accepted: null);
         CurvePanel.BringIntoView();
@@ -572,7 +712,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = enabled;
                 HighlightMode(enabled ? ModeMaxCooling : ModeCustom);
+            }
             else
                 ExtremeModeToggle.IsChecked = !enabled;
         }
@@ -618,7 +761,10 @@ public partial class FanControlView : UserControl
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
+            {
+                _appMaxCoolingActive = mode == FanMode.MaxCooling;
                 HighlightMode(button);
+            }
         }
         catch (Exception ex) when (ex is ManagementException or COMException
             or InvalidOperationException or UnauthorizedAccessException or TimeoutException
@@ -657,6 +803,16 @@ public partial class FanControlView : UserControl
         if (ReferenceEquals(button, ModeCustom)) return FanMode.Custom;
         return FanMode.Auto;
     }
+
+    private Button ModeButtonFor(FanMode mode) => mode switch
+    {
+        FanMode.Quiet => ModeSilent,
+        FanMode.Auto or FanMode.Balanced => ModeAuto,
+        FanMode.Performance => ModePerformance,
+        FanMode.MaxCooling => ModeMaxCooling,
+        FanMode.Custom => ModeCustom,
+        _ => ModeAuto
+    };
 
     /// <summary>
     /// Syncs hex telemetry accents to the active fan mode palette. UI-only.
@@ -753,6 +909,14 @@ public partial class FanControlView : UserControl
             LastUpdatedText.Text = $"Updated {reading.Timestamp.ToLocalTime():HH:mm:ss}";
             AnimateLastUpdated();
             ApplyTelemetry(reading);
+            var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
+            if (mode is FanMode currentMode)
+            {
+                var displayedMode = currentMode == FanMode.Custom && _appMaxCoolingActive
+                    ? FanMode.MaxCooling
+                    : currentMode;
+                HighlightMode(ModeButtonFor(displayedMode));
+            }
             if (_curveGraph is not null)
                 _curveGraph.CurrentTemperature = reading.CpuTemperature ?? reading.GpuTemperature;
         }

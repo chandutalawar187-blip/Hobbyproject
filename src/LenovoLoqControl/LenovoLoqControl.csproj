@@ -13,8 +13,34 @@
     <ApplicationManifest>App.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="LottieSharp" Version="2.4.3" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Extracted from .lottie packages for LottieSharp (JSON + image assets). -->
+    <Content Include="Assets\GpuIsometric.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\RgbCircle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Task.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\TaskNav.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\i\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Resource Include="Assets\GpuIsometric.json" />
+    <Resource Include="Assets\RgbCircle.json" />
+    <Resource Include="Assets\Task.json" />
+    <None Include="Assets\GpuIsometric.lottie" />
+    <None Include="Assets\RgbCircle.lottie" />
+    <None Include="Assets\Task.lottie" />
+    <None Include="Assets\TaskNavPreview.png" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,31 @@
 namespace LenovoLoqControl.Core;
 
 public enum FanMode { Auto, Quiet, Balanced, Performance, MaxCooling, Custom }
+public enum KeyboardLightLevel { Off, Low, High }
+public enum KeyboardRgbEffect { Off, Static, Breathing, ColorCycle, Wave }
+public enum KeyboardRgbBrightness { Low, High }
+public readonly record struct KeyboardRgbColor(byte Red, byte Green, byte Blue)
+{
+    public static KeyboardRgbColor White => new(255, 255, 255);
+}
+public sealed record KeyboardRgbSettings(KeyboardRgbEffect Effect, KeyboardRgbColor Color, byte Speed, KeyboardRgbBrightness Brightness)
+{
+    public static KeyboardRgbSettings Default => new(KeyboardRgbEffect.Static, KeyboardRgbColor.White, 3, KeyboardRgbBrightness.High);
+    public void Validate()
+    {
+        if (!Enum.IsDefined(Effect)) throw new ArgumentOutOfRangeException(nameof(Effect));
+        if (!Enum.IsDefined(Brightness)) throw new ArgumentOutOfRangeException(nameof(Brightness));
+        if (Speed is < 1 or > 4) throw new ArgumentOutOfRangeException(nameof(Speed), "Speed must be between 1 and 4.");
+    }
+}
+public enum KeyboardZoneType
+{
+    Unsupported,
+    WhiteBacklit,
+    FourZoneRgb,
+    TwentyFourZoneRgb,
+    RgbLayoutUnknown
+}
 public enum PowerLightColor { Blue, White, Red, Purple, Unknown }
 public enum ThermalState { Cool, Normal, Warm, Hot, Critical, Unknown }
 

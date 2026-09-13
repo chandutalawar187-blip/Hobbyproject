@@ -22,4 +22,5 @@ public interface IHardwareBackend : IDisposable
     IHardwareMonitor Monitor { get; }
     IFanController FanController { get; }
     IGpuOverclockController GpuOverclock { get; }
+    IKeyboardLightController KeyboardLight { get; }
 }

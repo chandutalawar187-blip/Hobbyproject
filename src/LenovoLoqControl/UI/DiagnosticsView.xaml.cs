@@ -14,12 +14,52 @@ public partial class DiagnosticsView : UserControl
     private readonly IHardwareBackend _hardware;
     private readonly List<DiagnosticRow> _rows = [];
     private string _reportText = "";
+    private bool _actionsStacked;
 
     public DiagnosticsView(IHardwareBackend? hardware = null)
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
-        Loaded += async (_, _) => await BuildReportAsync();
+        SizeChanged += DiagnosticsViewSizeChanged;
+        Loaded += async (_, _) =>
+        {
+            AdaptDiagnosticsActions(ActualWidth);
+            await BuildReportAsync();
+        };
+    }
+
+    private void DiagnosticsViewSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.WidthChanged && e.NewSize.Width > 0)
+            AdaptDiagnosticsActions(e.NewSize.Width);
+    }
+
+    private void AdaptDiagnosticsActions(double width)
+    {
+        if (DiagnosticsActions is null)
+            return;
+
+        var stack = width < ResponsiveLayout.BreakpointMedium;
+        if (stack == _actionsStacked)
+            return;
+
+        _actionsStacked = stack;
+        ResponsiveLayout.Transition(DiagnosticsActions, () =>
+        {
+            DiagnosticsActions.Orientation = stack ? Orientation.Vertical : Orientation.Horizontal;
+            foreach (UIElement child in DiagnosticsActions.Children)
+            {
+                if (child is FrameworkElement fe)
+                    fe.Margin = stack ? new Thickness(0, 0, 0, 10) : new Thickness(0, 0, 10, 0);
+            }
+
+            // Last button should not keep trailing margin in horizontal mode.
+            if (!stack && DiagnosticsActions.Children.Count > 0
+                && DiagnosticsActions.Children[^1] is FrameworkElement last)
+            {
+                last.Margin = new Thickness(0);
+            }
+        }, DiagnosticsActions);
     }
 
     private async Task BuildReportAsync()

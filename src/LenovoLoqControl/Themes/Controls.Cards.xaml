@@ -18,8 +18,8 @@
   </Style>
 
   <Style x:Key="Card.Metric" TargetType="Border" BasedOn="{StaticResource Card.Surface}">
-    <Setter Property="MinHeight" Value="148"/>
-    <Setter Property="Padding" Value="22"/>
+    <Setter Property="MinHeight" Value="136"/>
+    <Setter Property="Padding" Value="18"/>
   </Style>
 
   <Style x:Key="Card.Compact" TargetType="Border" BasedOn="{StaticResource Card.Surface}">

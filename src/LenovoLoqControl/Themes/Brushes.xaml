@@ -27,6 +27,21 @@
   <SolidColorBrush x:Key="Brush.Critical" Color="{DynamicResource Color.Critical}"/>
   <SolidColorBrush x:Key="Brush.Information" Color="{DynamicResource Color.Information}"/>
 
+  <SolidColorBrush x:Key="Brush.SliderPill" Color="{DynamicResource Color.SliderPill}"/>
+  <SolidColorBrush x:Key="Brush.SliderPillEdge" Color="{DynamicResource Color.SliderPillEdge}"/>
+  <LinearGradientBrush x:Key="Brush.SliderPillFill" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="{DynamicResource Color.SliderPillTop}" Offset="0"/>
+    <GradientStop Color="{DynamicResource Color.SliderPillBottom}" Offset="1"/>
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="Brush.SliderTrack" Color="{DynamicResource Color.SliderTrack}"/>
+  <SolidColorBrush x:Key="Brush.SliderTrackMuted" Color="{DynamicResource Color.SliderTrackMuted}"/>
+  <SolidColorBrush x:Key="Brush.SliderHalo" Color="{DynamicResource Color.SliderHalo}"/>
+  <SolidColorBrush x:Key="Brush.SliderThumb" Color="{DynamicResource Color.SliderThumb}"/>
+  <LinearGradientBrush x:Key="Brush.SliderPin" StartPoint="0.5,0" EndPoint="0.5,1">
+    <GradientStop Color="{DynamicResource Color.SliderPinTop}" Offset="0"/>
+    <GradientStop Color="{DynamicResource Color.SliderPinBottom}" Offset="1"/>
+  </LinearGradientBrush>
+
   <SolidColorBrush x:Key="Brush.ThermalCool" Color="{DynamicResource Color.ThermalCool}"/>
   <SolidColorBrush x:Key="Brush.ThermalNormal" Color="{DynamicResource Color.ThermalNormal}"/>
   <SolidColorBrush x:Key="Brush.ThermalWarm" Color="{DynamicResource Color.ThermalWarm}"/>

@@ -42,7 +42,10 @@ public sealed class TemperatureRing : ContentControl
     {
         Width = 132;
         Height = 132;
+        MinWidth = 72;
+        MinHeight = 72;
         Focusable = false;
+        ClipToBounds = false;
 
         _track = new Path
         {
@@ -86,7 +89,7 @@ public sealed class TemperatureRing : ContentControl
         {
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 8, 0, 0)
+            Margin = new Thickness(0, 4, 0, 0)
         };
         readout.Children.Add(_valueText);
         readout.Children.Add(_unitText);
@@ -205,9 +208,22 @@ public sealed class TemperatureRing : ContentControl
         var h = ActualHeight > 0 ? ActualHeight : Height;
         if (w <= 0 || h <= 0) return;
 
+        var size = Math.Min(w, h);
+        var scale = Math.Clamp(size / 132d, 0.55, 1.15);
+        var stroke = Math.Max(5, 10 * scale);
+        _track.StrokeThickness = stroke;
+        _progress.StrokeThickness = stroke;
+        _valueText.FontSize = Math.Max(16, 28 * scale);
+        _unitText.FontSize = Math.Max(8, 11 * scale);
+        _stateText.FontSize = Math.Max(8, 11 * scale);
+        // Compact dashboard rings already show thermal state in the text column.
+        _stateText.Visibility = size < 118 ? Visibility.Collapsed : Visibility.Visible;
+        _unitText.Margin = new Thickness(0, Math.Max(0, 2 * scale), 0, 0);
+        _stateText.Margin = new Thickness(0, Math.Max(1, 4 * scale), 0, 0);
+
         var cx = w / 2;
         var cy = h / 2;
-        var radius = Math.Min(w, h) / 2 - 8;
+        var radius = size / 2 - Math.Max(5, 8 * scale);
         _track.Data = BuildArc(cx, cy, radius, 0.999);
         _progress.Data = _displayedProgress <= 0.001
             ? Geometry.Empty
