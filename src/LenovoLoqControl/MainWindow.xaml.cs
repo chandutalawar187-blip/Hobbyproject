@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.IO;
+using System.Windows.Media.Imaging;
 using Forms = System.Windows.Forms;
 using Microsoft.Win32;
 using LenovoLoqControl.Core;
@@ -410,9 +411,9 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         AppUiPreferences.Changed -= OnUiPreferencesChanged;
-        _shellTimer.Stop();
+        _shellTimer?.Stop();
         _hardware.Dispose();
-        _trayIcon.Dispose();
+        _trayIcon?.Dispose();
         base.OnClosed(e);
     }
 
@@ -440,10 +441,16 @@ public partial class MainWindow : Window
 
     private static System.Drawing.Icon LoadApplicationIcon()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "app_icon.ico");
-        return File.Exists(path)
-            ? new System.Drawing.Icon(path)
-            : System.Drawing.SystemIcons.Application;
+        var resource = Application.GetResourceStream(
+            new Uri("pack://application:,,,/Assets/app_icon.ico"));
+        if (resource is null)
+            return System.Drawing.SystemIcons.Application;
+
+        using var stream = resource.Stream;
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        buffer.Position = 0;
+        return new System.Drawing.Icon(buffer);
     }
 
     private void HandleClosing(object? sender, CancelEventArgs e)

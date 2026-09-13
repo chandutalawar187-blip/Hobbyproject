@@ -12,13 +12,12 @@
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>App.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>
-    <Version>1.1.4</Version>
-    <AssemblyVersion>1.1.4.0</AssemblyVersion>
-    <FileVersion>1.1.4.0</FileVersion>
-    <InformationalVersion>1.1.4</InformationalVersion>
+    <Version>1.1.5</Version>
+    <AssemblyVersion>1.1.5.0</AssemblyVersion>
+    <FileVersion>1.1.5.0</FileVersion>
+    <InformationalVersion>1.1.5</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Assets\app_icon.ico" />
     <None Include="Assets\app_icon.png" />
     <PackageReference Include="LottieSharp" Version="2.4.3" />
     <PackageReference Include="System.Management" Version="8.0.0" />
@@ -49,6 +48,7 @@
     <Resource Include="Assets\GpuIsometric.json" />
     <Resource Include="Assets\RgbCircle.json" />
     <Resource Include="Assets\Task.json" />
+    <Resource Include="Assets\app_icon.ico" />
     <None Include="Assets\GpuIsometric.lottie" />
     <None Include="Assets\RgbCircle.lottie" />
     <None Include="Assets\Task.lottie" />
