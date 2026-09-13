@@ -132,7 +132,9 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
                     or KeyboardRgbEffect.Wave
                     ? MapSpeed(settings.Speed)
                     : (byte)0;
-                packet[4] = settings.Effect == KeyboardRgbEffect.Off ? (byte)0 : (byte)2;
+                packet[4] = settings.Effect == KeyboardRgbEffect.Off
+                    ? (byte)0
+                    : settings.Brightness == KeyboardRgbBrightness.Low ? (byte)1 : (byte)2;
                 for (var zone = 0; zone < 4; zone++)
                 {
                     packet[5 + zone * 3] = settings.Color.Red;
@@ -194,7 +196,8 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
             var settings = new KeyboardRgbSettings(
                 effect.Value,
                 new KeyboardRgbColor(packet[5], packet[6], packet[7]),
-                speed);
+                speed,
+                packet[4] == 1 ? KeyboardRgbBrightness.Low : KeyboardRgbBrightness.High);
             LogRgb($"get-feature succeeded effect={settings.Effect} color=#{settings.Color.Red:X2}{settings.Color.Green:X2}{settings.Color.Blue:X2} speed={settings.Speed}");
             return settings;
         }

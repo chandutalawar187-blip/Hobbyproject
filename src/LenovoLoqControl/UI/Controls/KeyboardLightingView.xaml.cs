@@ -311,22 +311,22 @@ public partial class KeyboardLightingView : UserControl
 
     private void RgbEffectChipChecked(object sender, RoutedEventArgs e)
     {
-        // Checked events can fire while BAML is still assigning named fields.
-        if (!IsInitialized || _syncingDeviceState)
+        // Checked events can fire while BAML is still assigning named fields / during init sync.
+        if (!IsInitialized || !IsLoaded || _syncingDeviceState)
             return;
 
-        if (sender is RadioButton { IsChecked: true } selected
-            && selected == EffectColorCycle
-            && ColorPickerPopup is not null)
-            ColorPickerPopup.IsOpen = false;
+        if (sender is not RadioButton { IsChecked: true })
+            return;
 
+        UpdateSignalColorVisibility(EffectColorCycle.IsChecked == true);
         QueueRgbPreview();
     }
 
     private void RgbPreviewChanged(object sender, RoutedEventArgs e)
     {
-        if (!_syncingDeviceState)
-            QueueRgbPreview();
+        if (!IsInitialized || !IsLoaded || _syncingDeviceState)
+            return;
+        QueueRgbPreview();
     }
 
     private void ApplyConfirmedRgbControls(KeyboardRgbSettings settings)
@@ -341,6 +341,9 @@ public partial class KeyboardLightingView : UserControl
             EffectWave.IsChecked = settings.Effect == KeyboardRgbEffect.Wave;
             RgbColorText.Text = $"#{settings.Color.Red:X2}{settings.Color.Green:X2}{settings.Color.Blue:X2}";
             RgbSpeedSlider.Value = settings.Speed;
+            RgbBrightnessLow.IsChecked = settings.Brightness == KeyboardRgbBrightness.Low;
+            RgbBrightnessHigh.IsChecked = settings.Brightness == KeyboardRgbBrightness.High;
+            UpdateSignalColorVisibility(settings.Effect == KeyboardRgbEffect.ColorCycle);
         }
         finally
         {
@@ -348,9 +351,32 @@ public partial class KeyboardLightingView : UserControl
         }
     }
 
+    /// <summary>
+    /// Color Cycle owns its own palette — hide Signal Color / picker immediately.
+    /// Static, Breathing, Wave, and Off restore the section. Speed stays visible.
+    /// </summary>
+    private void UpdateSignalColorVisibility(bool hideForColorCycle)
+    {
+        if (RgbColorPanel is null || ColorPickerPopup is null)
+            return;
+
+        if (hideForColorCycle)
+            ColorPickerPopup.IsOpen = false;
+
+        RgbColorPanel.Visibility = hideForColorCycle ? Visibility.Collapsed : Visibility.Visible;
+        if (RgbColorColumn is not null)
+            RgbColorColumn.Width = hideForColorCycle ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        if (RgbColorSpeedGap is not null)
+            RgbColorSpeedGap.Width = hideForColorCycle ? new GridLength(0) : new GridLength(16);
+        // Keep speed in its own column so collapsing Signal Color never zeroes it out.
+        if (RgbSpeedPanel is not null)
+            Grid.SetColumn(RgbSpeedPanel, 2);
+    }
+
     private async void QueueRgbPreview()
     {
-        if (_syncingDeviceState || _presenter is null || _lifetimeCts is null || _lifetimeCts.IsCancellationRequested)
+        if (!IsInitialized || !IsLoaded || _syncingDeviceState
+            || _presenter is null || _lifetimeCts is null || _lifetimeCts.IsCancellationRequested)
             return;
         if (!TryGetRgbSettings(out var settings))
             return;
@@ -382,7 +408,7 @@ public partial class KeyboardLightingView : UserControl
             RgbSpeedSlider.IsEnabled = true;
             RgbSpeedValue.Opacity = 1;
             RgbSpeedPanel.Visibility = Visibility.Visible;
-            RgbColorPanel.Visibility = Visibility.Visible;
+            UpdateSignalColorVisibility(hideForColorCycle: false);
             return;
         }
 
@@ -394,8 +420,9 @@ public partial class KeyboardLightingView : UserControl
 
         RgbColorSwatchButton.Background = new SolidColorBrush(
             Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue));
-        if (ColorPickerPopup.IsOpen)
+        if (ColorPickerPopup.IsOpen && settings.Effect != KeyboardRgbEffect.ColorCycle)
             ColorPicker.SetColor(settings.Color, raiseEvent: false);
+
         RgbSpeedValue.Text = settings.Effect == KeyboardRgbEffect.Static
             ? "N/A"
             : settings.Speed.ToString("00");
@@ -404,9 +431,8 @@ public partial class KeyboardLightingView : UserControl
         RgbSpeedPanel.Visibility = settings.Effect == KeyboardRgbEffect.Static
             ? Visibility.Collapsed
             : Visibility.Visible;
-        RgbColorPanel.Visibility = settings.Effect == KeyboardRgbEffect.ColorCycle
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+
+        UpdateSignalColorVisibility(settings.Effect == KeyboardRgbEffect.ColorCycle);
     }
 
     private void OpenColorPickerClick(object sender, RoutedEventArgs e)
@@ -453,7 +479,13 @@ public partial class KeyboardLightingView : UserControl
             EffectWave.IsChecked == true ? KeyboardRgbEffect.Wave :
             KeyboardRgbEffect.Static;
 
-        settings = new KeyboardRgbSettings(effect, color, (byte)Math.Clamp((int)RgbSpeedSlider.Value, 1, 4));
+        settings = new KeyboardRgbSettings(
+            effect,
+            color,
+            (byte)Math.Clamp((int)RgbSpeedSlider.Value, 1, 4),
+            RgbBrightnessLow.IsChecked == true
+                ? KeyboardRgbBrightness.Low
+                : KeyboardRgbBrightness.High);
         return true;
     }
 

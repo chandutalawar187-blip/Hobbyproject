@@ -222,7 +222,7 @@
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel x:Name="RgbColorPanel">
+        <StackPanel>
           <TextBlock x:Name="TitleText"
                      Style="{DynamicResource Text.Subtitle}"
                      Text="Keyboard Lighting"/>
@@ -390,14 +390,14 @@
                              AutomationProperties.Name="RGB effect Wave"/>
               </WrapPanel>
 
-              <Grid Margin="0,6,0,14">
+              <Grid x:Name="RgbColorSpeedGrid" Margin="0,6,0,14">
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="16"/>
+                  <ColumnDefinition x:Name="RgbColorColumn" Width="*"/>
+                  <ColumnDefinition x:Name="RgbColorSpeedGap" Width="16"/>
                   <ColumnDefinition Width="1.1*"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
+                <StackPanel x:Name="RgbColorPanel">
                   <TextBlock Style="{StaticResource Rgb.Caption}" Text="SIGNAL COLOR"/>
                   <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
@@ -478,6 +478,14 @@
                           AutomationProperties.Name="RGB effect speed"/>
                 </StackPanel>
               </Grid>
+
+              <StackPanel x:Name="RgbBrightnessPanel" Orientation="Horizontal" Margin="0,0,0,14">
+                <TextBlock Style="{StaticResource Rgb.Caption}" Text="BRIGHTNESS" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <RadioButton x:Name="RgbBrightnessLow" Content="Low" GroupName="RgbBrightness"
+                             Style="{StaticResource Rgb.EffectChip}" Checked="RgbPreviewChanged"/>
+                <RadioButton x:Name="RgbBrightnessHigh" Content="High" GroupName="RgbBrightness"
+                             Style="{StaticResource Rgb.EffectChip}" IsChecked="True" Checked="RgbPreviewChanged"/>
+              </StackPanel>
 
               <Grid>
                 <Grid.ColumnDefinitions>

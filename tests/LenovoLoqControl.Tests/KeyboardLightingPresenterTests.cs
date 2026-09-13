@@ -74,7 +74,8 @@ public class KeyboardLightingPresenterTests
         var settings = new KeyboardRgbSettings(
             KeyboardRgbEffect.ColorCycle,
             new KeyboardRgbColor(12, 34, 56),
-            7);
+            3,
+            KeyboardRgbBrightness.Low);
         var fake = FakeKeyboardLightController.Rgb(KeyboardZoneType.FourZoneRgb);
         fake.CurrentRgb = settings;
         var presenter = new KeyboardLightingPresenter(fake);
@@ -215,9 +216,9 @@ public class KeyboardLightingPresenterTests
     public void RgbSettings_RejectsUnknownEffectAndOutOfRangeSpeed()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new KeyboardRgbSettings((KeyboardRgbEffect)99, KeyboardRgbColor.White, 3).Validate());
+            new KeyboardRgbSettings((KeyboardRgbEffect)99, KeyboardRgbColor.White, 3, KeyboardRgbBrightness.High).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new KeyboardRgbSettings(KeyboardRgbEffect.Static, KeyboardRgbColor.White, 5).Validate());
+            new KeyboardRgbSettings(KeyboardRgbEffect.Static, KeyboardRgbColor.White, 5, KeyboardRgbBrightness.High).Validate());
     }
 }
 
