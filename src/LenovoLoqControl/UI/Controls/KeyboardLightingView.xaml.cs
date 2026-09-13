@@ -404,6 +404,7 @@ public partial class KeyboardLightingView : UserControl
             KeyboardPreview.RgbEffect = KeyboardRgbEffect.Static;
             KeyboardPreview.RgbPreviewColor = Colors.White;
             KeyboardPreview.RgbSpeed = 3;
+            KeyboardPreview.RgbBrightness = KeyboardRgbBrightness.High;
             RgbSpeedValue.Text = "03";
             RgbSpeedSlider.IsEnabled = true;
             RgbSpeedValue.Opacity = 1;
@@ -414,6 +415,7 @@ public partial class KeyboardLightingView : UserControl
 
         KeyboardPreview.RgbEffect = settings.Effect;
         KeyboardPreview.RgbSpeed = settings.Speed;
+        KeyboardPreview.RgbBrightness = settings.Brightness;
         KeyboardPreview.RgbPreviewColor = settings.Effect == KeyboardRgbEffect.Off
             ? null
             : Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue);

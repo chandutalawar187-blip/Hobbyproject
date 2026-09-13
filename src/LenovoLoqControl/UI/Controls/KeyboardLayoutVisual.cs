@@ -52,6 +52,10 @@ public sealed class KeyboardLayoutVisual : Grid
         DependencyProperty.Register(nameof(RgbSpeed), typeof(double), typeof(KeyboardLayoutVisual),
             new PropertyMetadata(3.0, OnVisualChanged));
 
+    public static readonly DependencyProperty RgbBrightnessProperty =
+        DependencyProperty.Register(nameof(RgbBrightness), typeof(KeyboardRgbBrightness), typeof(KeyboardLayoutVisual),
+            new PropertyMetadata(KeyboardRgbBrightness.High, OnVisualChanged));
+
     private readonly Border _frame;
     private readonly Canvas _hudOverlay = new() { IsHitTestVisible = false, ClipToBounds = false };
     private readonly Canvas _canvas = new() { ClipToBounds = false };
@@ -132,6 +136,12 @@ public sealed class KeyboardLayoutVisual : Grid
     {
         get => (double)GetValue(RgbSpeedProperty);
         set => SetValue(RgbSpeedProperty, value);
+    }
+
+    public KeyboardRgbBrightness RgbBrightness
+    {
+        get => (KeyboardRgbBrightness)GetValue(RgbBrightnessProperty);
+        set => SetValue(RgbBrightnessProperty, value);
     }
 
     private static void OnVisualChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -565,6 +575,7 @@ public sealed class KeyboardLayoutVisual : Grid
     {
         var baseColor = RgbPreviewColor ?? Colors.White;
         var speed = Math.Clamp(RgbSpeed, 1, 4);
+        var brightness = RgbBrightness == KeyboardRgbBrightness.High ? 1.0 : 0.55;
         var elapsed = (DateTime.UtcNow - _animStartUtc).TotalSeconds;
         // Map firmware speed 0–10 → animation rate (cycles per second-ish).
         var rate = 0.18 + (speed - 1) * 0.22;
@@ -576,7 +587,7 @@ public sealed class KeyboardLayoutVisual : Grid
                 break;
 
             case KeyboardRgbEffect.Static:
-                ApplyZoneColors(_ => baseColor, intensity: 0.92, reduced);
+                ApplyZoneColors(_ => baseColor, intensity: brightness, reduced);
                 break;
 
             case KeyboardRgbEffect.Breathing:
@@ -590,7 +601,7 @@ public sealed class KeyboardLayoutVisual : Grid
             {
                 if (reduced)
                 {
-                    ApplyZoneColors(_ => baseColor, intensity: 0.85, reduced);
+                    ApplyZoneColors(_ => baseColor, intensity: brightness, reduced);
                     break;
                 }
 
@@ -600,7 +611,7 @@ public sealed class KeyboardLayoutVisual : Grid
                     // per-zone phase offset makes the preview look like Wave.
                     var hue = (elapsed * rate * 120) % 360;
                     return FromHsv(hue, 0.85, 1);
-                }, intensity: 0.95, reduced);
+                }, intensity: brightness, reduced);
                 break;
             }
 
