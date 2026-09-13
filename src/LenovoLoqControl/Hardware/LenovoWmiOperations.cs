@@ -8,7 +8,6 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 {
     private const string Scope = @"root\WMI";
     private const string GameZoneQuery = "SELECT * FROM LENOVO_GAMEZONE_DATA";
-    private const uint FanFullSpeedFeatureId = 0x04020000;
 
     public bool IsSmartFanSupported { get; }
 
@@ -47,56 +46,25 @@ internal sealed class LenovoWmiOperations : ILenovoWmiOperations
 
     public void SetFullSpeed(bool enabled)
     {
-        using var searcher = new ManagementObjectSearcher(
-            Scope, "SELECT * FROM LENOVO_OTHER_METHOD");
-        using var rows = searcher.Get();
-        using var method = rows.Cast<ManagementObject>()
-            .FirstOrDefault(row => Convert.ToBoolean(row["Active"] ?? true))
-            ?? throw new InvalidOperationException("Lenovo Other Mode is unavailable.");
-
-        var expected = enabled ? 1u : 0u;
-        var current = ReadFeatureValue(method);
-        if (current == expected)
-            return;
-
         for (var attempt = 1; attempt <= 3; attempt++)
         {
-            using var parameters = method.GetMethodParameters("SetFeatureValue");
-            parameters["IDs"] = FanFullSpeedFeatureId;
-            parameters["value"] = expected;
-            using var result = method.InvokeMethod("SetFeatureValue", parameters, null);
-            ValidateFeatureResult(result);
-
-            var verified = ReadFeatureValue(method);
-            if (verified == expected)
+            InvokeMethod("SELECT * FROM LENOVO_FAN_METHOD", "Fan_Set_FullSpeed",
+                new Dictionary<string, object> { ["Status"] = enabled ? 1 : 0 });
+            if (ReadFullSpeed() == enabled)
                 return;
 
             if (attempt < 3)
                 Thread.Sleep(100);
         }
 
-        throw new InvalidOperationException(
-            $"Lenovo full-speed feature 0x{FanFullSpeedFeatureId:X8} did not verify value {expected}.");
+        throw new InvalidOperationException($"Lenovo Fan_Set_FullSpeed did not verify state {enabled}.");
     }
 
-    private static uint ReadFeatureValue(ManagementObject method)
+    private static bool ReadFullSpeed()
     {
-        using var parameters = method.GetMethodParameters("GetFeatureValue");
-        parameters["IDs"] = FanFullSpeedFeatureId;
-        using var result = method.InvokeMethod("GetFeatureValue", parameters, null);
-        if (result?.Properties["value"]?.Value is null)
-            throw new InvalidOperationException("Lenovo full-speed feature returned no value.");
-        return Convert.ToUInt32(result["value"]);
-    }
-
-    private static void ValidateFeatureResult(ManagementBaseObject? result)
-    {
-        if (result?.Properties["ReturnValue"]?.Value is null)
-            return;
-
-        var status = Convert.ToUInt32(result["ReturnValue"]);
-        if (status is not 0 and not 1)
-            throw new InvalidOperationException($"Lenovo Other Mode rejected the feature request (status {status}).");
+        var result = InvokeMethod("SELECT * FROM LENOVO_FAN_METHOD", "Fan_Get_FullSpeed",
+            new Dictionary<string, object>());
+        return result?["Status"]?.Value is bool enabled && enabled;
     }
 
     public FirmwareFanTable? ReadCustomFanTable()
