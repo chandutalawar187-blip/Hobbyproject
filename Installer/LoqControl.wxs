@@ -2,7 +2,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.0.8"
+           Version="1.0.9"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
@@ -60,8 +60,23 @@
                        Type="integer"
                        Value="1"
                        KeyPath="yes" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="LOQ Control"
+                       Type="string"
+                       Value="&quot;[INSTALLFOLDER]LoqControl.exe&quot; --startup" />
       </Component>
     </DirectoryRef>
+
+    <CustomAction Id="LaunchApplication"
+                  FileRef="LoqControlExe"
+                  ExeCommand=""
+                  Execute="immediate"
+                  Impersonate="yes"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize" Condition="NOT Installed" />
+    </InstallExecuteSequence>
 
   </Package>
 
