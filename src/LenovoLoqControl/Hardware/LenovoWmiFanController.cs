@@ -32,9 +32,7 @@ public sealed class LenovoWmiFanController : IFanController
             1 => FanMode.Quiet,
             2 => FanMode.Auto,
             3 => FanMode.Performance,
-            // Some Lenovo firmware revisions may expose a fourth Fn+Q state.
-            // This is read-only detection; writes remain limited to verified modes.
-            4 => FanMode.MaxCooling,
+            244 => FanMode.MaxCooling,
             255 => FanMode.Custom,
             _ => null
         }, cancellationToken);
@@ -74,14 +72,10 @@ public sealed class LenovoWmiFanController : IFanController
         {
             if (mode == FanMode.MaxCooling)
             {
-                // Custom mode keeps the firmware's existing custom profile active.
-                // The separate full-speed feature then overrides its duty cycle,
-                // so users do not need to apply a curve before using Max Cooling.
                 _operations.SetFullSpeed(false);
-                _operations.SetSmartFanMode(255u);
-                _operations.SetFullSpeed(true);
+                _operations.SetSmartFanMode(244u);
                 return new FanControlResult(true,
-                    "Maximum firmware cooling applied in Custom mode. Both fans are set to full speed.");
+                    "Maximum firmware cooling mode applied.");
             }
 
             if (mode == FanMode.Custom)
