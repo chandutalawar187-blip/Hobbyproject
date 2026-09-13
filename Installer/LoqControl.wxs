@@ -11,6 +11,7 @@
 
     <Feature Id="MainFeature" Title="LOQ Control" Level="1">
       <ComponentRef Id="ApplicationComponent" />
+      <ComponentRef Id="StartMenuComponent" />
       <ComponentGroupRef Id="AssetComponents" />
       <ComponentGroupRef Id="AssetImageComponents" />
     </Feature>
@@ -39,13 +40,25 @@
                     WorkingDirectory="INSTALLFOLDER"
                     Advertise="yes" />
         </File>
-        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
         <RegistryValue Root="HKLM"
                        Key="Software\LOQ Control"
                        Name="InstallPath"
                        Type="string"
                        Value="[INSTALLFOLDER]"
                        KeyPath="no" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuComponent" Guid="*">
+        <RemoveFile Id="RemoveStartMenuFiles" Name="*" On="uninstall" />
+        <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\LOQ Control"
+                       Name="StartMenuComponent"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
