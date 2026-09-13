@@ -85,7 +85,7 @@ public sealed class LenovoWmiFanController : IFanController
 
             if (mode == FanMode.Custom)
             {
-                _operations.SetFullSpeed(false);
+                TryDisableFullSpeed();
                 _operations.SetSmartFanMode(255u);
                 return new FanControlResult(true, "Custom firmware mode enabled.");
             }
@@ -101,8 +101,8 @@ public sealed class LenovoWmiFanController : IFanController
             if (firmwareMode == 0)
                 return FanControlResult.Unsupported("The requested firmware mode is not exposed by the Lenovo interface.");
 
-            _operations.SetFullSpeed(false);
             _operations.SetSmartFanMode(firmwareMode);
+            TryDisableFullSpeed();
             return new FanControlResult(true,
                 $"{mode} firmware mode applied.");
         }
@@ -137,7 +137,7 @@ public sealed class LenovoWmiFanController : IFanController
 
             // Legion Toolkit clears the separate full-speed flag before applying
             // a table; otherwise firmware can keep both fans at maximum.
-            _operations.SetFullSpeed(false);
+            TryDisableFullSpeed();
             _operations.SetSmartFanMode(255u);
             _operations.SetFanTable(values);
             return new FanControlResult(true,
@@ -160,6 +160,20 @@ public sealed class LenovoWmiFanController : IFanController
             return;
 
         await SetFanModeAsync(FanMode.Auto, cancellationToken);
+    }
+
+    private void TryDisableFullSpeed()
+    {
+        try
+        {
+            _operations.SetFullSpeed(false);
+        }
+        catch (Exception ex) when (ex is ManagementException or InvalidOperationException
+            or COMException or TimeoutException)
+        {
+            // Some LOQ firmware exposes Max Cooling through GameZone but does
+            // not implement the legacy Fan_Set_FullSpeed disable method.
+        }
     }
 
     private static int[] BuildFanSteps(FanCurve curve, FirmwareFanTable table)
