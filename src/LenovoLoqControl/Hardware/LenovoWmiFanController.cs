@@ -32,6 +32,9 @@ public sealed class LenovoWmiFanController : IFanController
             1 => FanMode.Quiet,
             2 => FanMode.Auto,
             3 => FanMode.Performance,
+            // Some Lenovo firmware revisions may expose a fourth Fn+Q state.
+            // This is read-only detection; writes remain limited to verified modes.
+            4 => FanMode.MaxCooling,
             255 => FanMode.Custom,
             _ => null
         }, cancellationToken);
