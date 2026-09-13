@@ -2,21 +2,21 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Shapes;
 using LenovoLoqControl.Core;
 
 namespace LenovoLoqControl.UI.Controls;
 
 /// <summary>
 /// Decorative LOQ 15APH8-style JIS keyboard silhouette (visual only).
-/// Lighting intensity mirrors white-backlight Off/Low/High; RGB modes may show
-/// zone guides without offering color controls.
+/// White backlight mirrors Off/Low/High; RGB modes animate a live 4-zone preview.
 /// </summary>
 public sealed class KeyboardLayoutVisual : Grid
 {
-    private const double U = 20;      // key unit width
-    private const double H = 18;      // key height
-    private const double G = 2.8;     // gap
-    private const double NumGap = 9;  // gap before numpad
+    private const double U = 20;
+    private const double H = 18;
+    private const double G = 2.8;
+    private const double NumGap = 9;
 
     private static readonly Color KeyFace = Color.FromRgb(0x12, 0x16, 0x1C);
     private static readonly Color KeyFaceLit = Color.FromRgb(0x22, 0x2A, 0x36);
@@ -24,7 +24,9 @@ public sealed class KeyboardLayoutVisual : Grid
     private static readonly Color LegendDim = Color.FromRgb(0x55, 0x63, 0x74);
     private static readonly Color LegendLit = Color.FromRgb(0xEC, 0xF1, 0xF8);
     private static readonly Color GlowWhite = Color.FromRgb(0xD8, 0xE6, 0xFF);
-    private static readonly Color Deck = Color.FromRgb(0x0A, 0x0C, 0x10);
+    private static readonly Color Deck = Color.FromRgb(0x07, 0x09, 0x0E);
+    private static readonly Color HudLine = Color.FromRgb(0x3A, 0xD0, 0xE8);
+    private static readonly Color HudDim = Color.FromArgb(0x55, 0x3A, 0xD0, 0xE8);
 
     public static readonly DependencyProperty LightLevelProperty =
         DependencyProperty.Register(nameof(LightLevel), typeof(KeyboardLightLevel?), typeof(KeyboardLayoutVisual),
@@ -42,35 +44,58 @@ public sealed class KeyboardLayoutVisual : Grid
         DependencyProperty.Register(nameof(RgbPreviewColor), typeof(Color?), typeof(KeyboardLayoutVisual),
             new PropertyMetadata(null, OnVisualChanged));
 
+    public static readonly DependencyProperty RgbEffectProperty =
+        DependencyProperty.Register(nameof(RgbEffect), typeof(KeyboardRgbEffect?), typeof(KeyboardLayoutVisual),
+            new PropertyMetadata(null, OnVisualChanged));
+
+    public static readonly DependencyProperty RgbSpeedProperty =
+        DependencyProperty.Register(nameof(RgbSpeed), typeof(double), typeof(KeyboardLayoutVisual),
+            new PropertyMetadata(3.0, OnVisualChanged));
+
+    private readonly Border _frame;
+    private readonly Canvas _hudOverlay = new() { IsHitTestVisible = false, ClipToBounds = false };
     private readonly Canvas _canvas = new() { ClipToBounds = false };
     private readonly List<KeyVisual> _keys = new();
     private readonly List<Border> _zoneHints = new();
+    private readonly List<SolidColorBrush> _zoneHintFills = new();
+    private readonly List<SolidColorBrush> _zoneHintBorders = new();
     private bool _built;
+    private bool _animating;
+    private EventHandler? _renderHandler;
+    private DateTime _animStartUtc = DateTime.UtcNow;
 
     public KeyboardLayoutVisual()
     {
         SnapsToDevicePixels = true;
         HorizontalAlignment = HorizontalAlignment.Stretch;
-        MinHeight = 156;
+        MinHeight = 168;
 
-        var frame = new Border
+        _frame = new Border
         {
             Background = new SolidColorBrush(Deck),
             BorderBrush = new SolidColorBrush(KeyEdge),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(12, 10, 12, 12)
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(14, 14, 14, 16),
+            ClipToBounds = false
         };
-        frame.Child = _canvas;
-        Children.Add(frame);
+
+        var stage = new Grid();
+        stage.Children.Add(_canvas);
+        stage.Children.Add(_hudOverlay);
+        _frame.Child = stage;
+        Children.Add(_frame);
 
         Loaded += (_, _) =>
         {
             EnsureBuilt();
             ApplyLighting();
             FitWidth();
+            SyncAnimationLoop();
         };
+        Unloaded += (_, _) => StopAnimationLoop();
         SizeChanged += (_, _) => FitWidth();
+        IsVisibleChanged += (_, _) => SyncAnimationLoop();
     }
 
     public KeyboardLightLevel? LightLevel
@@ -97,12 +122,26 @@ public sealed class KeyboardLayoutVisual : Grid
         set => SetValue(RgbPreviewColorProperty, value);
     }
 
+    public KeyboardRgbEffect? RgbEffect
+    {
+        get => (KeyboardRgbEffect?)GetValue(RgbEffectProperty);
+        set => SetValue(RgbEffectProperty, value);
+    }
+
+    public double RgbSpeed
+    {
+        get => (double)GetValue(RgbSpeedProperty);
+        set => SetValue(RgbSpeedProperty, value);
+    }
+
     private static void OnVisualChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not KeyboardLayoutVisual v) return;
         v.EnsureBuilt();
+        v.UpdateHudChrome();
         v.ApplyLighting();
         v.UpdateZoneHints();
+        v.SyncAnimationLoop();
     }
 
     private void EnsureBuilt()
@@ -110,6 +149,7 @@ public sealed class KeyboardLayoutVisual : Grid
         if (_built) return;
         _built = true;
         Build();
+        UpdateHudChrome();
     }
 
     private void FitWidth()
@@ -117,8 +157,12 @@ public sealed class KeyboardLayoutVisual : Grid
         if (!_built || ActualWidth <= 1) return;
         var natural = _canvas.Width;
         if (natural <= 1) return;
-        var scale = Math.Clamp((ActualWidth - 24) / natural, 0.68, 1.2);
-        _canvas.LayoutTransform = new ScaleTransform(scale, scale);
+        var scale = Math.Clamp((ActualWidth - 28) / natural, 0.68, 1.2);
+        var transform = new ScaleTransform(scale, scale);
+        _canvas.LayoutTransform = transform;
+        _hudOverlay.LayoutTransform = transform;
+        _hudOverlay.Width = _canvas.Width;
+        _hudOverlay.Height = _canvas.Height;
     }
 
     private void Build()
@@ -126,16 +170,16 @@ public sealed class KeyboardLayoutVisual : Grid
         _canvas.Children.Clear();
         _keys.Clear();
         _zoneHints.Clear();
+        _zoneHintFills.Clear();
+        _zoneHintBorders.Clear();
 
-        // Column helper: x position of unit column c (0-based) in main block.
         double X(double col) => col * (U + G);
         double Y(int row) => row * (H + G);
         double W(double units) => units * U + Math.Max(0, units - 1) * G;
 
-        var num0 = X(15.2) + NumGap; // numpad left
+        var num0 = X(15.2) + NumGap;
         double NX(int col) => num0 + col * (U + G);
 
-        // Row 0 — function
         Add("Esc", X(0), Y(0), W(1.25), 0);
         Add("F1", X(1.6), Y(0), U, 0);
         Add("F2", X(2.6), Y(0), U, 0);
@@ -150,13 +194,11 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("F11", X(12.4), Y(0), U, 2);
         Add("F12", X(13.4), Y(0), U, 2);
         Add("Ins", X(14.7), Y(0), U, 2);
-        // Numpad media / nav strip
         Add("Hom", NX(0), Y(0), U, 3);
         Add("End", NX(1), Y(0), U, 3);
         Add("P↑", NX(2), Y(0), U, 3);
         Add("P↓", NX(3), Y(0), U, 3);
 
-        // Row 1 — numbers (JIS)
         Add("半/全", X(0), Y(1), U, 0, 7);
         Add("1", X(1), Y(1), U, 0);
         Add("2", X(2), Y(1), U, 0);
@@ -177,7 +219,6 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("*", NX(2), Y(1), U, 3);
         Add("−", NX(3), Y(1), U, 3);
 
-        // Row 2 — QWERTY + Enter top + numpad
         Add("Tab", X(0), Y(2), W(1.45), 0, 8);
         Add("Q", X(1.45), Y(2), U, 0);
         Add("W", X(2.45), Y(2), U, 0);
@@ -191,14 +232,12 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("P", X(10.45), Y(2), U, 2);
         Add("@", X(11.45), Y(2), U, 2);
         Add("[", X(12.45), Y(2), U, 2);
-        // JIS Enter (tall)
         Add("Enter", X(13.45), Y(2), W(1.55), 2, 8, H * 2 + G);
         Add("7", NX(0), Y(2), U, 3);
         Add("8", NX(1), Y(2), U, 3);
         Add("9", NX(2), Y(2), U, 3);
         Add("+", NX(3), Y(2), U, 3, 9, H * 2 + G);
 
-        // Row 3 — home
         Add("Caps", X(0), Y(3), W(1.7), 0, 8);
         Add("A", X(1.7), Y(3), U, 0);
         Add("S", X(2.7), Y(3), U, 0);
@@ -216,7 +255,6 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("5", NX(1), Y(3), U, 3);
         Add("6", NX(2), Y(3), U, 3);
 
-        // Row 4 — ZXCV
         Add("Shift", X(0), Y(4), W(2.15), 0, 8);
         Add("Z", X(2.15), Y(4), U, 0);
         Add("X", X(3.15), Y(4), U, 0);
@@ -235,7 +273,6 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("3", NX(2), Y(4), U, 3);
         Add("Ent", NX(3), Y(4), U, 3, 8, H * 2 + G);
 
-        // Row 5 — modifiers + short space (JIS) + up arrow
         Add("Ctrl", X(0), Y(5), W(1.15), 0, 8);
         Add("Fn", X(1.15), Y(5), U, 0, 8);
         Add("Win", X(2.15), Y(5), U, 0, 8);
@@ -249,7 +286,6 @@ public sealed class KeyboardLayoutVisual : Grid
         Add("0", NX(0), Y(5), W(2), 3);
         Add(".", NX(2), Y(5), U, 3);
 
-        // Row 6 — arrow cluster (offset down like the reference)
         Add("←", X(12.55), Y(6), U, 2);
         Add("↓", X(13.55), Y(6), U, 2);
         Add("→", X(14.55), Y(6), U, 2);
@@ -259,6 +295,71 @@ public sealed class KeyboardLayoutVisual : Grid
 
         _canvas.Width = NX(4);
         _canvas.Height = Y(6) + H + 2;
+        _hudOverlay.Width = _canvas.Width;
+        _hudOverlay.Height = _canvas.Height;
+        BuildHudOverlay();
+    }
+
+    private void BuildHudOverlay()
+    {
+        _hudOverlay.Children.Clear();
+        var w = _canvas.Width;
+        var h = _canvas.Height;
+        const double arm = 14;
+
+        void Corner(double x, double y, double dx, double dy)
+        {
+            var hLine = new Line
+            {
+                X1 = x, Y1 = y, X2 = x + dx * arm, Y2 = y,
+                Stroke = new SolidColorBrush(HudLine),
+                StrokeThickness = 1.4,
+                Opacity = 0.85
+            };
+            var vLine = new Line
+            {
+                X1 = x, Y1 = y, X2 = x, Y2 = y + dy * arm,
+                Stroke = new SolidColorBrush(HudLine),
+                StrokeThickness = 1.4,
+                Opacity = 0.85
+            };
+            _hudOverlay.Children.Add(hLine);
+            _hudOverlay.Children.Add(vLine);
+        }
+
+        Corner(-4, -4, 1, 1);
+        Corner(w + 4, -4, -1, 1);
+        Corner(-4, h + 4, 1, -1);
+        Corner(w + 4, h + 4, -1, -1);
+
+        var tag = new TextBlock
+        {
+            Text = "LIVE PREVIEW · 4-ZONE",
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(HudLine),
+            Opacity = 0.75
+        };
+        Canvas.SetLeft(tag, 0);
+        Canvas.SetTop(tag, -16);
+        _hudOverlay.Children.Add(tag);
+    }
+
+    private void UpdateHudChrome()
+    {
+        var rgbMode = RgbEffect is not null || ShowZoneHints;
+        _frame.BorderBrush = new SolidColorBrush(rgbMode ? Color.FromArgb(0x88, 0x3A, 0xD0, 0xE8) : KeyEdge);
+        _frame.Effect = rgbMode && !(PreferReducedMotion || AppUiPreferences.ReducedMotion)
+            ? new DropShadowEffect
+            {
+                Color = HudLine,
+                BlurRadius = 18,
+                ShadowDepth = 0,
+                Opacity = 0.22,
+                RenderingBias = RenderingBias.Performance
+            }
+            : null;
+        _hudOverlay.Visibility = rgbMode ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Add(
@@ -273,6 +374,14 @@ public sealed class KeyboardLayoutVisual : Grid
         var h = height ?? H;
         var face = new SolidColorBrush(KeyFace);
         var legend = new SolidColorBrush(LegendDim);
+        var glow = new DropShadowEffect
+        {
+            Color = GlowWhite,
+            BlurRadius = 0,
+            ShadowDepth = 0,
+            Opacity = 0,
+            RenderingBias = RenderingBias.Performance
+        };
         var border = new Border
         {
             Width = width,
@@ -280,9 +389,10 @@ public sealed class KeyboardLayoutVisual : Grid
             Background = face,
             BorderBrush = new SolidColorBrush(KeyEdge),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
+            CornerRadius = new CornerRadius(3),
             SnapsToDevicePixels = true,
             IsHitTestVisible = false,
+            Effect = glow,
             Child = new TextBlock
             {
                 Text = label,
@@ -297,37 +407,38 @@ public sealed class KeyboardLayoutVisual : Grid
         Canvas.SetLeft(border, left);
         Canvas.SetTop(border, top);
         _canvas.Children.Add(border);
-        _keys.Add(new KeyVisual(border, face, legend, zone));
+        _keys.Add(new KeyVisual(border, face, legend, glow, zone));
     }
 
     private void BuildZoneHints(double numpadLeft)
     {
         var height = Y(6) + H;
-        var edges = new[] { 0d, X(5.2), X(9.2), numpadLeft - 4, _canvas.Width > 0 ? _canvas.Width : numpadLeft + 4 * (U + G) };
-        // Width not finalized yet — use computed numpad end.
-        edges[4] = numpadLeft + 4 * (U + G);
+        var edges = new[] { 0d, X(5.2), X(9.2), numpadLeft - 4, numpadLeft + 4 * (U + G) };
 
         for (var i = 0; i < 4; i++)
         {
+            var fill = new SolidColorBrush(Color.FromArgb(0x18, 0x3A, 0xD0, 0xE8));
+            var stroke = new SolidColorBrush(HudDim);
             var hint = new Border
             {
                 Width = Math.Max(10, edges[i + 1] - edges[i] - 3),
                 Height = height,
-                Background = new SolidColorBrush(Color.FromArgb(0x14, 0xE2, 0x23, 0x1A)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xE2, 0x23, 0x1A)),
+                Background = fill,
+                BorderBrush = stroke,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(4),
                 Opacity = 0,
                 IsHitTestVisible = false,
                 Child = new TextBlock
                 {
-                    Text = $"Zone {i + 1}",
+                    Text = $"Z{i + 1}",
                     FontSize = 9,
                     FontWeight = FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush(Color.FromArgb(0x99, 0xFF, 0x6B, 0x63)),
+                    Foreground = new SolidColorBrush(HudLine),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Top,
-                    Margin = new Thickness(0, 4, 0, 0)
+                    Margin = new Thickness(0, 4, 0, 0),
+                    Opacity = 0.7
                 }
             };
             Canvas.SetLeft(hint, edges[i] + 1);
@@ -335,6 +446,8 @@ public sealed class KeyboardLayoutVisual : Grid
             Panel.SetZIndex(hint, -1);
             _canvas.Children.Insert(0, hint);
             _zoneHints.Add(hint);
+            _zoneHintFills.Add(fill);
+            _zoneHintBorders.Add(stroke);
         }
     }
 
@@ -343,34 +456,74 @@ public sealed class KeyboardLayoutVisual : Grid
 
     private void UpdateZoneHints()
     {
+        var show = ShowZoneHints || RgbEffect is not null;
         foreach (var hint in _zoneHints)
-            hint.Opacity = ShowZoneHints ? 1 : 0;
+            hint.Opacity = show ? 1 : 0;
+    }
+
+    private bool NeedsLiveAnimation()
+    {
+        if (!IsLoaded || !IsVisible || PreferReducedMotion || AppUiPreferences.ReducedMotion)
+            return false;
+        return RgbEffect is KeyboardRgbEffect.Breathing
+            or KeyboardRgbEffect.ColorCycle
+            or KeyboardRgbEffect.Wave;
+    }
+
+    private void SyncAnimationLoop()
+    {
+        if (NeedsLiveAnimation())
+            StartAnimationLoop();
+        else
+            StopAnimationLoop();
+    }
+
+    private void StartAnimationLoop()
+    {
+        if (_animating) return;
+        _animating = true;
+        _animStartUtc = DateTime.UtcNow;
+        _renderHandler = (_, _) => ApplyLighting();
+        CompositionTarget.Rendering += _renderHandler;
+    }
+
+    private void StopAnimationLoop()
+    {
+        if (!_animating) return;
+        _animating = false;
+        if (_renderHandler is not null)
+            CompositionTarget.Rendering -= _renderHandler;
+        _renderHandler = null;
     }
 
     private void ApplyLighting()
     {
         var reduced = PreferReducedMotion || AppUiPreferences.ReducedMotion;
-        var rgb = RgbPreviewColor;
-        var useRgb = ShowZoneHints && rgb is Color;
 
+        if (RgbEffect is KeyboardRgbEffect effect)
+        {
+            ApplyRgbEffect(effect, reduced);
+            return;
+        }
+
+        var rgb = RgbPreviewColor;
+        if (ShowZoneHints && rgb is Color solid)
+        {
+            ApplyZoneColors(_ => solid, intensity: 0.85, reduced);
+            return;
+        }
+
+        ApplyWhiteBacklight(reduced);
+    }
+
+    private void ApplyWhiteBacklight(bool reduced)
+    {
         double faceMix;
         double legendMix;
         double glowOpacity;
         double glowBlur;
-        Color glowColor = GlowWhite;
 
-        if (useRgb)
-        {
-            var c = rgb!.Value;
-            glowColor = c;
-            var off = LightLevel == KeyboardLightLevel.Off; // unused for RGB usually
-            _ = off;
-            faceMix = 0.55;
-            legendMix = 0.85;
-            glowOpacity = reduced ? 0 : 0.48;
-            glowBlur = 9;
-        }
-        else switch (LightLevel)
+        switch (LightLevel)
         {
             case KeyboardLightLevel.High:
                 faceMix = 1;
@@ -400,43 +553,163 @@ public sealed class KeyboardLayoutVisual : Grid
 
         foreach (var key in _keys)
         {
-            if (useRgb)
+            key.Face.Color = Lerp(KeyFace, KeyFaceLit, faceMix);
+            key.Legend.Color = Lerp(LegendDim, LegendLit, legendMix);
+            SetGlow(key, GlowWhite, glowOpacity, glowBlur);
+        }
+
+        TintZoneHints(HudLine, 0.35);
+    }
+
+    private void ApplyRgbEffect(KeyboardRgbEffect effect, bool reduced)
+    {
+        var baseColor = RgbPreviewColor ?? Colors.White;
+        var speed = Math.Clamp(RgbSpeed, 0, 10);
+        var elapsed = (DateTime.UtcNow - _animStartUtc).TotalSeconds;
+        // Map firmware speed 0–10 → animation rate (cycles per second-ish).
+        var rate = 0.18 + speed * 0.22;
+
+        switch (effect)
+        {
+            case KeyboardRgbEffect.Off:
+                ApplyZoneColors(_ => Colors.Transparent, intensity: 0, reduced);
+                break;
+
+            case KeyboardRgbEffect.Static:
+                ApplyZoneColors(_ => baseColor, intensity: 0.92, reduced);
+                break;
+
+            case KeyboardRgbEffect.Breathing:
             {
-                var c = rgb!.Value;
-                // Slight per-zone brightness variation so the 4-zone LOQ layout reads clearly.
-                var zoneBoost = 0.85 + key.Zone * 0.05;
-                key.Face.Color = Color.FromRgb(
-                    (byte)Math.Clamp(KeyFace.R + (c.R - KeyFace.R) * faceMix * zoneBoost * 0.35, 0, 255),
-                    (byte)Math.Clamp(KeyFace.G + (c.G - KeyFace.G) * faceMix * zoneBoost * 0.35, 0, 255),
-                    (byte)Math.Clamp(KeyFace.B + (c.B - KeyFace.B) * faceMix * zoneBoost * 0.35, 0, 255));
-                key.Legend.Color = Lerp(LegendDim, LegendLit, legendMix);
-                glowColor = Color.FromRgb(
-                    (byte)Math.Clamp(c.R * zoneBoost, 0, 255),
-                    (byte)Math.Clamp(c.G * zoneBoost, 0, 255),
-                    (byte)Math.Clamp(c.B * zoneBoost, 0, 255));
-            }
-            else
-            {
-                key.Face.Color = Lerp(KeyFace, KeyFaceLit, faceMix);
-                key.Legend.Color = Lerp(LegendDim, LegendLit, legendMix);
-                glowColor = GlowWhite;
+                var wave = reduced ? 0.75 : 0.35 + 0.65 * (0.5 + 0.5 * Math.Sin(elapsed * rate * Math.PI * 2));
+                ApplyZoneColors(_ => baseColor, intensity: wave, reduced);
+                break;
             }
 
-            if (glowOpacity <= 0.01)
+            case KeyboardRgbEffect.ColorCycle:
             {
-                key.Root.Effect = null;
+                if (reduced)
+                {
+                    ApplyZoneColors(_ => baseColor, intensity: 0.85, reduced);
+                    break;
+                }
+
+                ApplyZoneColors(zone =>
+                {
+                    // Color Cycle changes the whole keyboard together. A
+                    // per-zone phase offset makes the preview look like Wave.
+                    var hue = (elapsed * rate * 120) % 360;
+                    return FromHsv(hue, 0.85, 1);
+                }, intensity: 0.95, reduced);
+                break;
+            }
+
+            case KeyboardRgbEffect.Wave:
+            {
+                if (reduced)
+                {
+                    ApplyZoneColors(zone => ScaleColor(baseColor, 0.55 + zone * 0.12), intensity: 0.85, reduced);
+                    break;
+                }
+
+                ApplyZoneColors(zone =>
+                {
+                    var phase = elapsed * rate * Math.PI * 2 - zone * 0.9;
+                    var crest = 0.25 + 0.75 * (0.5 + 0.5 * Math.Sin(phase));
+                    // Sweep hue slightly across zones for a traveling wave feel.
+                    var hueShift = (elapsed * rate * 90) % 360;
+                    var traveling = FromHsv((HueOf(baseColor) + hueShift + zone * 28) % 360, 0.8, 1);
+                    return Lerp(ScaleColor(baseColor, 0.35), traveling, crest);
+                }, intensity: 0.95, reduced);
+                break;
+            }
+
+            default:
+                ApplyZoneColors(_ => baseColor, intensity: 0.8, reduced);
+                break;
+        }
+    }
+
+    private void ApplyZoneColors(Func<int, Color> colorForZone, double intensity, bool reduced)
+    {
+        intensity = Math.Clamp(intensity, 0, 1);
+        var glowOpacity = reduced ? 0 : 0.18 + 0.42 * intensity;
+        var glowBlur = 7 + 4 * intensity;
+        var faceMix = 0.25 + 0.55 * intensity;
+        var legendMix = 0.45 + 0.5 * intensity;
+
+        Color[] zoneColors =
+        [
+            colorForZone(0),
+            colorForZone(1),
+            colorForZone(2),
+            colorForZone(3)
+        ];
+
+        foreach (var key in _keys)
+        {
+            var c = zoneColors[Math.Clamp(key.Zone, 0, 3)];
+            if (c.A == 0 || intensity <= 0.02)
+            {
+                key.Face.Color = KeyFace;
+                key.Legend.Color = Lerp(LegendDim, LegendLit, 0.12);
+                SetGlow(key, GlowWhite, 0, 0);
                 continue;
             }
 
-            key.Root.Effect = new DropShadowEffect
-            {
-                Color = glowColor,
-                BlurRadius = glowBlur,
-                ShadowDepth = 0,
-                Opacity = glowOpacity,
-                RenderingBias = RenderingBias.Performance
-            };
+            key.Face.Color = Color.FromRgb(
+                (byte)Math.Clamp(KeyFace.R + (c.R - KeyFace.R) * faceMix * 0.55, 0, 255),
+                (byte)Math.Clamp(KeyFace.G + (c.G - KeyFace.G) * faceMix * 0.55, 0, 255),
+                (byte)Math.Clamp(KeyFace.B + (c.B - KeyFace.B) * faceMix * 0.55, 0, 255));
+            key.Legend.Color = Lerp(LegendDim, LegendLit, legendMix);
+            SetGlow(key, c, glowOpacity, glowBlur);
         }
+
+        for (var i = 0; i < _zoneHints.Count; i++)
+            TintZoneHint(i, zoneColors[i], intensity);
+    }
+
+    private void TintZoneHints(Color color, double intensity) =>
+        TintZoneHint(-1, color, intensity);
+
+    private void TintZoneHint(int index, Color color, double intensity)
+    {
+        intensity = Math.Clamp(intensity, 0, 1);
+        if (index < 0)
+        {
+            for (var i = 0; i < _zoneHintFills.Count; i++)
+                TintZoneHint(i, color, intensity);
+            return;
+        }
+
+        if (index >= _zoneHintFills.Count) return;
+        var aFill = (byte)Math.Clamp(18 + 40 * intensity, 0, 80);
+        var aStroke = (byte)Math.Clamp(50 + 90 * intensity, 0, 160);
+        _zoneHintFills[index].Color = Color.FromArgb(aFill, color.R, color.G, color.B);
+        _zoneHintBorders[index].Color = Color.FromArgb(aStroke, color.R, color.G, color.B);
+    }
+
+    private static void SetGlow(KeyVisual key, Color color, double opacity, double blur)
+    {
+        if (opacity <= 0.01 || blur <= 0.01)
+        {
+            key.Glow.Opacity = 0;
+            key.Glow.BlurRadius = 0;
+            return;
+        }
+
+        key.Glow.Color = color;
+        key.Glow.Opacity = opacity;
+        key.Glow.BlurRadius = blur;
+    }
+
+    private static Color ScaleColor(Color c, double t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        return Color.FromRgb(
+            (byte)(c.R * t),
+            (byte)(c.G * t),
+            (byte)(c.B * t));
     }
 
     private static Color Lerp(Color a, Color b, double t)
@@ -448,19 +721,64 @@ public sealed class KeyboardLayoutVisual : Grid
             (byte)(a.B + (b.B - a.B) * t));
     }
 
+    private static double HueOf(Color c)
+    {
+        var r = c.R / 255.0;
+        var g = c.G / 255.0;
+        var b = c.B / 255.0;
+        var max = Math.Max(r, Math.Max(g, b));
+        var min = Math.Min(r, Math.Min(g, b));
+        var delta = max - min;
+        if (delta < 0.0001) return 0;
+        double hue;
+        if (Math.Abs(max - r) < 0.0001)
+            hue = ((g - b) / delta) % 6;
+        else if (Math.Abs(max - g) < 0.0001)
+            hue = (b - r) / delta + 2;
+        else
+            hue = (r - g) / delta + 4;
+        hue *= 60;
+        if (hue < 0) hue += 360;
+        return hue;
+    }
+
+    private static Color FromHsv(double h, double s, double v)
+    {
+        h = (h % 360 + 360) % 360;
+        s = Math.Clamp(s, 0, 1);
+        v = Math.Clamp(v, 0, 1);
+        var c = v * s;
+        var x = c * (1 - Math.Abs(h / 60 % 2 - 1));
+        var m = v - c;
+        double r, g, b;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+
+        return Color.FromRgb(
+            (byte)Math.Clamp((r + m) * 255, 0, 255),
+            (byte)Math.Clamp((g + m) * 255, 0, 255),
+            (byte)Math.Clamp((b + m) * 255, 0, 255));
+    }
+
     private sealed class KeyVisual
     {
-        public KeyVisual(Border root, SolidColorBrush face, SolidColorBrush legend, int zone)
+        public KeyVisual(Border root, SolidColorBrush face, SolidColorBrush legend, DropShadowEffect glow, int zone)
         {
             Root = root;
             Face = face;
             Legend = legend;
+            Glow = glow;
             Zone = zone;
         }
 
         public Border Root { get; }
         public SolidColorBrush Face { get; }
         public SolidColorBrush Legend { get; }
+        public DropShadowEffect Glow { get; }
         public int Zone { get; }
     }
 }
