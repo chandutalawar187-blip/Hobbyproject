@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Effects;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using LenovoLoqControl.Core;
 
 namespace LenovoLoqControl.UI.Controls;
@@ -60,6 +60,7 @@ public partial class KeyboardLightingView : UserControl
 
         _presenter.SyncFromBackendMetadata();
         ApplyState(_presenter.State);
+        UpdateLiveKeyboardPreview();
 
         try
         {
@@ -79,6 +80,7 @@ public partial class KeyboardLightingView : UserControl
         _lifetimeCts = null;
         _rgbPreviewCts = null;
         ClearSelectionGlow();
+        KeyboardPreview.RgbEffect = null;
     }
 
     private void OnPresenterStateChanged()
@@ -121,6 +123,10 @@ public partial class KeyboardLightingView : UserControl
     {
         EnsureStyles();
 
+        var isFourZone = state.UiMode == KeyboardLightingUiMode.FourZoneRgb;
+        var isRgbComingLater = state.UiMode is KeyboardLightingUiMode.TwentyFourZoneRgbComingLater
+            or KeyboardLightingUiMode.RgbLayoutUnknown;
+
         TitleText.Text = state.UiMode == KeyboardLightingUiMode.WhiteBacklit
             ? "Keyboard Lighting"
             : state.Headline;
@@ -128,26 +134,49 @@ public partial class KeyboardLightingView : UserControl
         TypeBadgeText.Text = state.TypeBadgeText;
 
         WhitePanel.Visibility = state.ShowWhiteControls ? Visibility.Visible : Visibility.Collapsed;
-        RgbInfoPanel.Visibility = state.UiMode == KeyboardLightingUiMode.FourZoneRgb
-            ? Visibility.Visible : Visibility.Collapsed;
-        // Header already carries the unsupported headline/detail — avoid a duplicate card.
+        RgbInfoPanel.Visibility = isFourZone ? Visibility.Visible : Visibility.Collapsed;
+        RgbComingLaterPanel.Visibility = isRgbComingLater ? Visibility.Visible : Visibility.Collapsed;
         UnsupportedPanel.Visibility = Visibility.Collapsed;
 
         var showKeyboard = state.ShowWhiteControls || state.ShowRgbComingSoon;
         KeyboardPreview.Visibility = showKeyboard ? Visibility.Visible : Visibility.Collapsed;
         KeyboardPreview.PreferReducedMotion = AppUiPreferences.ReducedMotion;
-        KeyboardPreview.ShowZoneHints = state.UiMode == KeyboardLightingUiMode.FourZoneRgb;
-        // White levels drive key glow; RGB preview stays neutral (no fake colors).
-        KeyboardPreview.LightLevel = state.ShowWhiteControls
-            ? state.CurrentLevel ?? state.SelectedLevel
-            : null;
-        KeyboardPreview.RgbPreviewColor = null;
+        KeyboardPreview.ShowZoneHints = isFourZone;
 
-        if (state.ShowRgbComingSoon)
+        if (state.ShowWhiteControls)
+        {
+            KeyboardPreview.LightLevel = state.CurrentLevel ?? state.SelectedLevel;
+            KeyboardPreview.RgbEffect = null;
+            KeyboardPreview.RgbPreviewColor = null;
+        }
+        else if (isFourZone)
+        {
+            KeyboardPreview.LightLevel = null;
+            if (!state.IsBusy && state.LastConfirmedRgbSettings is not null)
+                UpdateLiveKeyboardPreview(state.LastConfirmedRgbSettings);
+            else
+                UpdateLiveKeyboardPreview();
+        }
+        else
+        {
+            KeyboardPreview.LightLevel = null;
+            KeyboardPreview.RgbEffect = null;
+            KeyboardPreview.RgbPreviewColor = null;
+        }
+
+        if (isFourZone)
         {
             RgbHeadline.Text = state.Headline;
             RgbDetail.Text = state.DetailBody;
             RgbInfoBody.Text = KeyboardLightingPresentation.RgbInfoPanelText(state.UiMode);
+            RgbLinkStatus.Text = state.IsBusy ? "LINK · BUSY" : "LINK · READY";
+        }
+
+        if (isRgbComingLater)
+        {
+            RgbComingLaterHeadline.Text = state.Headline;
+            RgbComingLaterDetail.Text = state.DetailBody + " " +
+                KeyboardLightingPresentation.RgbInfoPanelText(state.UiMode);
         }
 
         if (state.UiMode == KeyboardLightingUiMode.Unsupported)
@@ -156,7 +185,7 @@ public partial class KeyboardLightingView : UserControl
         CurrentLevelText.Text = state.CurrentLevelLabel;
         StatusText.Text = state.StatusMessage;
         StatusBanner.Style = (Style)FindResource(BadgeStyleKey(state.StatusKind));
-        StatusBanner.Visibility = state.ShowWhiteControls || state.UiMode == KeyboardLightingUiMode.FourZoneRgb
+        StatusBanner.Visibility = state.ShowWhiteControls || isFourZone
             ? Visibility.Visible : Visibility.Collapsed;
         TypeBadge.Style = (Style)FindResource(state.UiMode == KeyboardLightingUiMode.Unsupported
             ? "Badge.Neutral"
@@ -167,9 +196,8 @@ public partial class KeyboardLightingView : UserControl
         LevelLow.IsEnabled = enabled;
         LevelHigh.IsEnabled = enabled;
         RefreshButton.IsEnabled = !state.IsBusy;
-        RgbEffectPanel.Visibility = state.UiMode == KeyboardLightingUiMode.FourZoneRgb
-            ? Visibility.Visible : Visibility.Collapsed;
-        RgbApplyButton.IsEnabled = !state.IsBusy;
+        RgbEffectPanel.IsEnabled = isFourZone && !state.IsBusy;
+        RgbApplyButton.IsEnabled = isFourZone && !state.IsBusy;
 
         HighlightLevel(state.SelectedLevel, state.ShowWhiteControls && !AppUiPreferences.ReducedMotion);
     }
@@ -261,22 +289,33 @@ public partial class KeyboardLightingView : UserControl
             StatusText.Text = "Enter a color in #RRGGBB format.";
             return;
         }
+
+        UpdateLiveKeyboardPreview(settings);
         await _presenter.ApplyRgbEffectAsync(settings, _lifetimeCts.Token);
     }
 
-    private async void RgbPreviewChanged(object sender, RoutedEventArgs e)
+    private void RgbEffectChipChecked(object sender, RoutedEventArgs e) =>
+        QueueRgbPreview();
+
+    private void RgbPreviewChanged(object sender, RoutedEventArgs e) =>
+        QueueRgbPreview();
+
+    private async void QueueRgbPreview()
     {
         if (_presenter is null || _lifetimeCts is null || _lifetimeCts.IsCancellationRequested)
             return;
         if (!TryGetRgbSettings(out var settings))
             return;
 
+        // Immediate visual preview on the silhouette (live effect).
+        UpdateLiveKeyboardPreview(settings);
+
         _rgbPreviewCts?.Cancel();
         _rgbPreviewCts?.Dispose();
         _rgbPreviewCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
         try
         {
-            await Task.Delay(250, _rgbPreviewCts.Token);
+            await Task.Delay(280, _rgbPreviewCts.Token);
             await _presenter.PreviewRgbEffectAsync(settings, _rgbPreviewCts.Token);
         }
         catch (OperationCanceledException)
@@ -284,12 +323,40 @@ public partial class KeyboardLightingView : UserControl
         }
     }
 
+    private void UpdateLiveKeyboardPreview(KeyboardRgbSettings? settings = null)
+    {
+        if (settings is null && !TryGetRgbSettings(out settings))
+        {
+            KeyboardPreview.RgbEffect = KeyboardRgbEffect.Static;
+            KeyboardPreview.RgbPreviewColor = Colors.White;
+            KeyboardPreview.RgbSpeed = 3;
+            RgbSpeedValue.Text = "03";
+            return;
+        }
+
+        KeyboardPreview.RgbEffect = settings.Effect;
+        KeyboardPreview.RgbSpeed = settings.Speed;
+        KeyboardPreview.RgbPreviewColor = settings.Effect == KeyboardRgbEffect.Off
+            ? null
+            : Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue);
+
+        RgbColorSwatch.Background = new SolidColorBrush(
+            Color.FromRgb(settings.Color.Red, settings.Color.Green, settings.Color.Blue));
+        RgbSpeedValue.Text = settings.Speed.ToString("00");
+    }
+
     private bool TryGetRgbSettings(out KeyboardRgbSettings settings)
     {
         settings = KeyboardRgbSettings.Default;
-        if (!Enum.TryParse<KeyboardRgbEffect>(RgbEffectCombo.SelectedValue?.ToString(), out var effect)
-            || !TryParseHex(RgbColorText.Text, out var color))
+        if (!TryParseHex(RgbColorText.Text, out var color))
             return false;
+
+        var effect =
+            EffectOff.IsChecked == true ? KeyboardRgbEffect.Off :
+            EffectBreathing.IsChecked == true ? KeyboardRgbEffect.Breathing :
+            EffectColorCycle.IsChecked == true ? KeyboardRgbEffect.ColorCycle :
+            EffectWave.IsChecked == true ? KeyboardRgbEffect.Wave :
+            KeyboardRgbEffect.Static;
 
         settings = new KeyboardRgbSettings(effect, color, (byte)Math.Clamp((int)RgbSpeedSlider.Value, 0, 10));
         return true;

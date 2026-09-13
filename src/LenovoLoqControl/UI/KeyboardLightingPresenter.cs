@@ -251,6 +251,7 @@ public sealed class KeyboardLightingPresenter
             Replace(State with
             {
                 IsApplying = false,
+                LastConfirmedRgbSettings = result.Accepted ? settings : State.LastConfirmedRgbSettings,
                 StatusMessage = result.Accepted && operationName == "Previewing"
                     ? $"Preview active: {settings.Effect}."
                     : result.Message,

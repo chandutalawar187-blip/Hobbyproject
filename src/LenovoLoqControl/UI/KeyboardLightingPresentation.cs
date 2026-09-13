@@ -53,6 +53,9 @@ public sealed record KeyboardLightingState(
     public string CurrentLevelLabel => CurrentLevel is KeyboardLightLevel level
         ? $"Current level · {level}"
         : "Current level · Unknown";
+
+    /// <summary>Last RGB settings confirmed by a successful HID transmission.</summary>
+    public KeyboardRgbSettings? LastConfirmedRgbSettings { get; init; }
 }
 
 /// <summary>Pure presentation helpers for keyboard lighting capability states.</summary>
