@@ -2,7 +2,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.0.9"
+           Version="1.1.0"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
@@ -33,14 +33,7 @@
       <Component Id="ApplicationComponent" Guid="*">
         <File Id="LoqControlExe"
               Source="$(var.PublishDir)\LoqControl.exe"
-              KeyPath="yes">
-          <Shortcut Id="StartMenuShortcut"
-                    Directory="ApplicationProgramsFolder"
-                    Name="LOQ Control"
-                    Description="Lenovo LOQ control center"
-                    WorkingDirectory="INSTALLFOLDER"
-                    Advertise="yes" />
-        </File>
+              KeyPath="yes" />
         <RegistryValue Root="HKLM"
                        Key="Software\LOQ Control"
                        Name="InstallPath"
@@ -52,6 +45,12 @@
 
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="StartMenuComponent" Guid="*">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="LOQ Control"
+                  Description="Lenovo LOQ control center"
+                  Target="[INSTALLFOLDER]LoqControl.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Advertise="no" />
         <RemoveFile Id="RemoveStartMenuFiles" Name="*" On="uninstall" />
         <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
         <RegistryValue Root="HKCU"

@@ -48,6 +48,15 @@ The resulting `publish\LoqControl.exe` can be copied to another Windows 10/11
 x64 machine. The app still runs as the signed-in user; publishing does not add
 administrator privileges.
 
+## MSI installation and updates
+
+The versioned x64 MSI installs a direct (non-advertised) Start Menu shortcut,
+so launching LOQ Control does not invoke Windows Installer self-repair. A
+fresh installation launches the application once and registers the same
+executable in the current user's Windows startup list. MSI upgrades reuse the
+shared upgrade code to replace the previous installation, while uninstall
+removes the startup registration and Start Menu shortcut.
+
 ## What works today
 
 * **Windows telemetry:** refreshes CPU usage, CPU clock, memory usage, battery charge, and charging state every three seconds on the dashboard, with live fan and temperature telemetry refreshed separately on the Fan Control page. Polls are single-flight, and missing fields are shown as **Unavailable**; the app never estimates them.
