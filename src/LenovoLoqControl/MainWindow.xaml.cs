@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Icon = LoadAdaptiveWindowIcon();
         Closing += HandleClosing;
         _trayIcon = CreateTrayIcon();
 
@@ -441,8 +442,9 @@ public partial class MainWindow : Window
 
     private static System.Drawing.Icon LoadApplicationIcon()
     {
+        var resourceName = UseLightLogo() ? "app_icon_white.ico" : "app_icon_black.ico";
         var resource = Application.GetResourceStream(
-            new Uri("pack://application:,,,/Assets/app_icon.ico"));
+            new Uri($"pack://application:,,,/Assets/{resourceName}"));
         if (resource is null)
             return System.Drawing.SystemIcons.Application;
 
@@ -451,6 +453,30 @@ public partial class MainWindow : Window
         stream.CopyTo(buffer);
         buffer.Position = 0;
         return new System.Drawing.Icon(buffer);
+    }
+
+    private static BitmapImage LoadAdaptiveWindowIcon()
+    {
+        var resourceName = UseLightLogo() ? "app_icon_white.ico" : "app_icon_black.ico";
+        var resource = Application.GetResourceStream(
+            new Uri($"pack://application:,,,/Assets/{resourceName}"))
+            ?? throw new IOException($"The adaptive icon resource '{resourceName}' is unavailable.");
+        using var stream = resource.Stream;
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = new MemoryStream(buffer.ToArray());
+        image.EndInit();
+        image.Freeze();
+        return image;
+    }
+
+    private static bool UseLightLogo()
+    {
+        return Application.Current.TryFindResource("Color.Background") is System.Windows.Media.Color color
+            && (color.R * 299 + color.G * 587 + color.B * 114) / 1000 < 150;
     }
 
     private void HandleClosing(object? sender, CancelEventArgs e)
