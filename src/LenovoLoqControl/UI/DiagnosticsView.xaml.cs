@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text;
+using System.Management;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -141,7 +143,17 @@ public partial class DiagnosticsView : UserControl
             AddRow("ImController / Vantage status", false, DiagnosticKind.Fail, ex.Message);
         }
 
-        _reportText = BuildTextReport(identity, reading);
+        var inventory = ReadSystemInventory();
+        AddRow("Memory inventory", inventory.MemoryAvailable, inventory.MemoryKind, inventory.MemorySummary);
+        AddRow("Storage inventory", inventory.StorageAvailable, inventory.StorageKind, inventory.StorageSummary);
+        AddRow("SSD temperature", inventory.SsdTemperature is not null, inventory.SsdTemperature is not null ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            inventory.SsdTemperature is double ssd ? $"{ssd:0.#} °C" : "Unavailable through supported Windows storage interface");
+        AddRow("Battery information", inventory.BatteryAvailable, inventory.BatteryKind, inventory.BatterySummary);
+        AddRow("Graphics adapters", inventory.GraphicsAvailable, inventory.GraphicsKind, inventory.GraphicsSummary);
+        AddRow("Display information", inventory.DisplayAvailable, inventory.DisplayKind, inventory.DisplaySummary);
+        AddRow("Windows information", true, DiagnosticKind.Ok, inventory.WindowsSummary);
+
+        _reportText = BuildTextReport(identity, reading, inventory);
     }
 
     private static string ModeLabel(FanMode mode) => mode switch
@@ -224,32 +236,254 @@ public partial class DiagnosticsView : UserControl
         CapabilityList.Children.Add(row);
     }
 
-    private string BuildTextReport(HardwareIdentity identity, SensorReading? reading)
+    private string BuildTextReport(HardwareIdentity identity, SensorReading? reading, SystemInventory inventory)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("LOQ Control — Diagnostic Report");
-        sb.AppendLine($"Generated: {DateTimeOffset.Now:u}");
-        sb.AppendLine($"Manufacturer: {identity.Manufacturer}");
-        sb.AppendLine($"Model: {identity.Model}");
-        sb.AppendLine($"Processor: {identity.Processor}");
-        sb.AppendLine($"IsLenovoLoq: {identity.IsLenovoLoq}");
+        sb.AppendLine("LOQ CONTROL - DIAGNOSTIC REPORT");
+        sb.AppendLine(new string('=', 92));
+        sb.AppendLine($"Generated    : {DateTimeOffset.Now:u}");
+        sb.AppendLine($"Manufacturer : {identity.Manufacturer}");
+        sb.AppendLine($"Model        : {identity.Model}");
+        sb.AppendLine($"Processor    : {identity.Processor}");
+        sb.AppendLine($"Lenovo LOQ   : {(identity.IsLenovoLoq ? "Yes" : "No")}");
         sb.AppendLine();
+        sb.AppendLine("CAPABILITY CHECKS");
+        sb.AppendLine(new string('-', 92));
+        sb.AppendLine($"{"STATUS",-8} {"CAPABILITY",-34} {"AVAILABILITY",-15} DETAILS");
+        sb.AppendLine(new string('-', 92));
         foreach (var row in _rows)
-            sb.AppendLine($"{row.Kind}\t{row.Name}\t{(row.Available ? "available" : "unavailable")}\t{row.Detail}");
+        {
+            var status = row.Kind switch
+            {
+                DiagnosticKind.Ok => "OK",
+                DiagnosticKind.Warn => "WARN",
+                _ => "FAIL"
+            };
+            var availability = row.Available ? "Available" : "Unavailable";
+            sb.AppendLine($"{status,-8} {TrimForColumn(row.Name, 34),-34} {availability,-15} {row.Detail}");
+        }
+
         sb.AppendLine();
+        sb.AppendLine("CURRENT TELEMETRY");
+        sb.AppendLine(new string('-', 92));
         if (reading is not null)
         {
-            sb.AppendLine($"CPU temp: {Fmt(reading.CpuTemperature)}");
-            sb.AppendLine($"GPU temp: {Fmt(reading.GpuTemperature)}");
-            sb.AppendLine($"CPU RPM: {Fmt(reading.CpuFanRpm)}");
-            sb.AppendLine($"GPU RPM: {Fmt(reading.GpuFanRpm)}");
-            sb.AppendLine($"CPU usage: {Fmt(reading.CpuUsage)}");
-            sb.AppendLine($"GPU usage: {Fmt(reading.GpuUsage)}");
+            sb.AppendLine($"{"CPU temperature",-24} {Fmt(reading.CpuTemperature),12}");
+            sb.AppendLine($"{"GPU temperature",-24} {Fmt(reading.GpuTemperature),12}");
+            sb.AppendLine($"{"CPU fan RPM",-24} {Fmt(reading.CpuFanRpm),12}");
+            sb.AppendLine($"{"GPU fan RPM",-24} {Fmt(reading.GpuFanRpm),12}");
+            sb.AppendLine($"{"CPU utilization",-24} {Fmt(reading.CpuUsage),12}");
+            sb.AppendLine($"{"GPU utilization",-24} {Fmt(reading.GpuUsage),12}");
         }
+        else
+            sb.AppendLine("Telemetry unavailable through the supported interface.");
+
+        sb.AppendLine();
+        sb.AppendLine("SYSTEM INVENTORY");
+        sb.AppendLine(new string('-', 92));
+        sb.AppendLine($"{"Memory",-24} {inventory.MemorySummary}");
+        sb.AppendLine($"{"Storage",-24} {inventory.StorageSummary}");
+        sb.AppendLine($"{"SSD temperature",-24} {Fmt(inventory.SsdTemperature)} °C");
+        sb.AppendLine($"{"Battery",-24} {inventory.BatterySummary}");
+        sb.AppendLine($"{"Graphics",-24} {inventory.GraphicsSummary}");
+        sb.AppendLine($"{"Display",-24} {inventory.DisplaySummary}");
+        sb.AppendLine($"{"Windows",-24} {inventory.WindowsSummary}");
+
         return sb.ToString();
     }
 
-    private static string Fmt(double? value) => value is double n ? n.ToString("0.###") : "null";
+    private static string Fmt(double? value) => value is double n ? n.ToString("0.###") : "Unavailable";
+
+    private static string TrimForColumn(string value, int width) =>
+        value.Length <= width ? value : value[..(width - 1)] + "…";
+
+    private static SystemInventory ReadSystemInventory()
+    {
+        var memoryParts = new List<string>();
+        var storageParts = new List<string>();
+        double? ssdTemperature = null;
+        var memoryAvailable = false;
+        var storageAvailable = false;
+        var batteryAvailable = false;
+        var batteryKind = DiagnosticKind.Warn;
+        var batterySummary = "Battery information unavailable";
+
+        try
+        {
+            using var memory = new ManagementObjectSearcher(
+                "SELECT Capacity, Speed, Manufacturer, PartNumber FROM Win32_PhysicalMemory");
+            foreach (ManagementObject row in memory.Get())
+            {
+                var capacity = Convert.ToDouble(row["Capacity"] ?? 0) / (1024d * 1024d * 1024d);
+                var speed = row["Speed"]?.ToString();
+                var manufacturer = row["Manufacturer"]?.ToString()?.Trim();
+                var part = row["PartNumber"]?.ToString()?.Trim();
+                memoryParts.Add($"{capacity:0.#} GB {speed} MHz {manufacturer} {part}".Trim());
+            }
+            memoryAvailable = memoryParts.Count > 0;
+        }
+        catch
+        {
+            memoryParts.Add("Unable to query physical memory");
+        }
+
+        try
+        {
+            using var disks = new ManagementObjectSearcher(
+                "SELECT DeviceID, Model, Size, MediaType, InterfaceType FROM Win32_DiskDrive");
+            foreach (ManagementObject row in disks.Get())
+            {
+                var size = Convert.ToDouble(row["Size"] ?? 0) / (1024d * 1024d * 1024d);
+                var model = row["Model"]?.ToString()?.Trim() ?? "Unknown drive";
+                var media = row["MediaType"]?.ToString()?.Trim();
+                var bus = row["InterfaceType"]?.ToString()?.Trim();
+                storageParts.Add($"{model} · {size:0.#} GB · {media} · {bus}".Trim());
+
+                var smartTemperature = SmartmontoolsTemperatureReader.ReadTemperature(
+                    row["DeviceID"]?.ToString() ?? "",
+                    model);
+                if (smartTemperature is double temperature)
+                    ssdTemperature = ssdTemperature is double current
+                        ? Math.Max(current, temperature)
+                        : temperature;
+            }
+            storageAvailable = storageParts.Count > 0;
+        }
+        catch
+        {
+            storageParts.Add("Unable to query physical storage");
+        }
+
+        try
+        {
+            using var physicalDisks = new ManagementObjectSearcher(
+                @"root\Microsoft\Windows\Storage",
+                "SELECT * FROM MSFT_PhysicalDisk");
+            foreach (ManagementObject disk in physicalDisks.Get())
+            {
+                var value = disk.Properties["Temperature"]?.Value;
+                if (value is not null && double.TryParse(value.ToString(), out var temperature)
+                    && temperature is > 0 and < 150)
+                    ssdTemperature = ssdTemperature is double current
+                        ? Math.Max(current, temperature)
+                        : temperature;
+            }
+
+            using var reliability = new ManagementObjectSearcher(
+                @"root\Microsoft\Windows\Storage",
+                "SELECT Temperature FROM MSFT_StorageReliabilityCounter");
+            foreach (ManagementObject counter in reliability.Get())
+            {
+                if (double.TryParse(counter["Temperature"]?.ToString(), out var temperature)
+                    && temperature is > 0 and < 150)
+                    ssdTemperature = ssdTemperature is double current
+                        ? Math.Max(current, temperature)
+                        : temperature;
+            }
+        }
+        catch
+        {
+            // SSD temperature is optional and often requires vendor storage support.
+        }
+
+        try
+        {
+            using var batteries = new ManagementObjectSearcher(
+                "SELECT Name, EstimatedChargeRemaining, BatteryStatus, DesignCapacity, FullChargeCapacity, Chemistry, Status FROM Win32_Battery");
+            var batteryRows = batteries.Get().Cast<ManagementObject>().ToArray();
+            if (batteryRows.Length > 0)
+            {
+                var battery = batteryRows[0];
+                batteryAvailable = true;
+                batteryKind = DiagnosticKind.Ok;
+                var charge = battery["EstimatedChargeRemaining"]?.ToString() ?? "Unavailable";
+                var status = battery["BatteryStatus"]?.ToString() ?? "Unavailable";
+                var design = battery["DesignCapacity"]?.ToString() ?? "Unavailable";
+                var full = battery["FullChargeCapacity"]?.ToString() ?? "Unavailable";
+                var chemistry = battery["Chemistry"]?.ToString() ?? "Unavailable";
+                batterySummary = $"{battery["Name"] ?? "Battery"} · Charge {charge}% · Status {status} · Design {design} mWh · Full {full} mWh · Chemistry {chemistry}";
+            }
+        }
+        catch
+        {
+            batterySummary = "Unable to query Windows battery information";
+        }
+
+        var graphicsParts = new List<string>();
+        var displayParts = new List<string>();
+        try
+        {
+            using var graphics = new ManagementObjectSearcher(
+                "SELECT Name, DriverVersion, AdapterRAM, VideoModeDescription FROM Win32_VideoController");
+            foreach (ManagementObject adapter in graphics.Get())
+            {
+                var memory = adapter["AdapterRAM"] is object rawMemory
+                    && ulong.TryParse(rawMemory.ToString(), out var bytes)
+                    ? $"{bytes / (1024d * 1024d * 1024d):0.#} GB"
+                    : "VRAM unavailable";
+                graphicsParts.Add($"{adapter["Name"] ?? "Unknown adapter"} · Driver {adapter["DriverVersion"] ?? "Unavailable"} · {memory} · {adapter["VideoModeDescription"] ?? "Mode unavailable"}");
+            }
+        }
+        catch
+        {
+            graphicsParts.Add("Unable to query graphics adapters");
+        }
+
+        try
+        {
+            using var displays = new ManagementObjectSearcher(
+                "SELECT Name, MonitorManufacturer, ScreenWidth, ScreenHeight, PNPDeviceID FROM Win32_DesktopMonitor");
+            foreach (ManagementObject display in displays.Get())
+            {
+                displayParts.Add($"{display["Name"] ?? "Unknown display"} · {display["MonitorManufacturer"] ?? "Manufacturer unavailable"} · {display["ScreenWidth"] ?? "?"}x{display["ScreenHeight"] ?? "?"} · {display["PNPDeviceID"] ?? "ID unavailable"}");
+            }
+        }
+        catch
+        {
+            displayParts.Add("Unable to query display information");
+        }
+
+        string displayVersion;
+        string build;
+        try
+        {
+            displayVersion = Registry.GetValue(
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+                "DisplayVersion",
+                null)?.ToString() ?? "Unavailable";
+            build = Registry.GetValue(
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+                "CurrentBuild",
+                null)?.ToString() ?? Environment.OSVersion.Version.Build.ToString();
+        }
+        catch
+        {
+            displayVersion = "Unavailable";
+            build = Environment.OSVersion.Version.Build.ToString();
+        }
+
+        var architecture = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
+        var windowsSummary = $"{Environment.OSVersion.VersionString} · Version {displayVersion} · Build {build} · {architecture}";
+
+        return new SystemInventory(
+            memoryAvailable,
+            memoryAvailable ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            memoryParts.Count == 0 ? "Unavailable" : string.Join(" | ", memoryParts),
+            storageAvailable,
+            storageAvailable ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            storageParts.Count == 0 ? "Unavailable" : string.Join(" | ", storageParts),
+            ssdTemperature,
+            batteryAvailable,
+            batteryKind,
+            batterySummary,
+            graphicsParts.Count > 0,
+            graphicsParts.Count > 0 ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            graphicsParts.Count == 0 ? "Unavailable" : string.Join(" | ", graphicsParts),
+            displayParts.Count > 0,
+            displayParts.Count > 0 ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            displayParts.Count == 0 ? "Unavailable" : string.Join(" | ", displayParts),
+            windowsSummary);
+    }
 
     private void ExportClick(object sender, RoutedEventArgs e)
     {
@@ -286,4 +520,22 @@ public partial class DiagnosticsView : UserControl
 
     private enum DiagnosticKind { Ok, Warn, Fail }
     private sealed record DiagnosticRow(string Name, bool Available, DiagnosticKind Kind, string Detail);
+    private sealed record SystemInventory(
+        bool MemoryAvailable,
+        DiagnosticKind MemoryKind,
+        string MemorySummary,
+        bool StorageAvailable,
+        DiagnosticKind StorageKind,
+        string StorageSummary,
+        double? SsdTemperature,
+        bool BatteryAvailable,
+        DiagnosticKind BatteryKind,
+        string BatterySummary,
+        bool GraphicsAvailable,
+        DiagnosticKind GraphicsKind,
+        string GraphicsSummary,
+        bool DisplayAvailable,
+        DiagnosticKind DisplayKind,
+        string DisplaySummary,
+        string WindowsSummary);
 }

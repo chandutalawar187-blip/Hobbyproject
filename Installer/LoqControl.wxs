@@ -16,6 +16,7 @@
       <ComponentRef Id="StartMenuComponent" />
       <ComponentGroupRef Id="AssetComponents" />
       <ComponentGroupRef Id="AssetImageComponents" />
+      <ComponentGroupRef Id="SmartmontoolsComponents" />
     </Feature>
 
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -23,6 +24,7 @@
         <Directory Id="AssetsFolder" Name="Assets">
           <Directory Id="AssetImagesFolder" Name="i" />
         </Directory>
+        <Directory Id="SmartmontoolsFolder" Name="smartmontools" />
       </Directory>
     </StandardDirectory>
 
@@ -85,6 +87,15 @@
   </Package>
 
   <Fragment>
+      <ComponentGroup Id="SmartmontoolsComponents" Directory="SmartmontoolsFolder">
+        <Component Id="SmartctlRuntime" Guid="*">
+          <File Source="$(var.PublishDir)\smartmontools\smartctl.exe" KeyPath="yes" />
+          <File Source="$(var.PublishDir)\smartmontools\drivedb.h" />
+          <File Source="$(var.PublishDir)\smartmontools\COPYING.txt" />
+          <File Source="$(var.PublishDir)\smartmontools\SOURCE-NOTICE.md" />
+        </Component>
+      </ComponentGroup>
+
       <ComponentGroup Id="AssetComponents" Directory="AssetsFolder">
         <Component Id="GpuIsometricAsset" Guid="*">
           <File Source="$(var.PublishDir)\Assets\GpuIsometric.json" KeyPath="yes" />
