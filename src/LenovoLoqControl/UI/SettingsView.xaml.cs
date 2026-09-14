@@ -28,9 +28,12 @@ public partial class SettingsView : UserControl
             ? "Provider status · Ready for firmware mode commands"
             : $"Provider status · {_hardware.FanController.AvailabilityMessage}";
         ReducedMotion.IsChecked = AppUiPreferences.ReducedMotion;
+        RunInTrayOnClose.IsChecked = AppUiPreferences.RunInTrayOnClose;
         AppearanceMode.SelectedValue = AppUiPreferences.Appearance.ToString();
         ReducedMotion.Checked += (_, _) => AppUiPreferences.ReducedMotion = true;
         ReducedMotion.Unchecked += (_, _) => AppUiPreferences.ReducedMotion = false;
+        RunInTrayOnClose.Checked += (_, _) => AppUiPreferences.RunInTrayOnClose = true;
+        RunInTrayOnClose.Unchecked += (_, _) => AppUiPreferences.RunInTrayOnClose = false;
         Loaded += async (_, _) =>
         {
             await RefreshImControllerAsync();

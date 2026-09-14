@@ -15,7 +15,7 @@ if (-not (Test-Path $sourceAnimation)) {
 }
 New-Item -ItemType Directory -Force $publishAssets | Out-Null
 Copy-Item $sourceAnimation (Join-Path $publishAssets "Laptop_Control_Center.lottie") -Force
-Copy-Item (Join-Path $root "src\LenovoLoqControl\Assets\app_icon.ico") (Join-Path $publishDir "app_icon.ico") -Force
+Copy-Item (Join-Path $root "src\LenovoLoqControl\Assets\app_icon_black.ico") (Join-Path $publishDir "app_icon.ico") -Force
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `

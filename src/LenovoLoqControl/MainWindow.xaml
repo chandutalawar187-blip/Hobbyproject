@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
         xmlns:shell="clr-namespace:LenovoLoqControl.UI.Shell"
+        xmlns:windowChrome="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="LOQ Control"
         Foreground="{DynamicResource Brush.TextPrimary}"
         Width="1280" Height="800"
@@ -12,7 +13,99 @@
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
         SizeChanged="WindowSizeChanged">
-  <Grid x:Name="ShellRoot">
+  <WindowChrome.WindowChrome>
+    <windowChrome:WindowChrome CaptionHeight="0"
+                               GlassFrameThickness="0"
+                               ResizeBorderThickness="6"
+                               UseAeroCaptionButtons="True"/>
+  </WindowChrome.WindowChrome>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="42"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    <Border x:Name="TitleBar"
+            Grid.Row="0"
+            Background="{DynamicResource Brush.Navigation}"
+            BorderBrush="{DynamicResource Brush.BorderSubtle}"
+            BorderThickness="0,0,0,1"
+            PreviewMouseLeftButtonDown="TitleBarMouseDown">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="46"/>
+          <ColumnDefinition Width="46"/>
+          <ColumnDefinition Width="46"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0"
+                    Orientation="Horizontal"
+                    Margin="18,0,0,0"
+                    VerticalAlignment="Center">
+          <Border Width="24"
+                  Height="24"
+                  Padding="4"
+                  Background="#FFFFFFFF"
+                  CornerRadius="6"
+                  VerticalAlignment="Center">
+            <Image Source="pack://application:,,,/Assets/app_icon_black.png"
+                   Stretch="Uniform"/>
+          </Border>
+          <TextBlock Text="LOQ Control"
+                     Foreground="{DynamicResource Brush.TextPrimary}"
+                     FontSize="14"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     Margin="10,0,0,0"/>
+          <TextBlock Text="CONTROL CENTER"
+                     Foreground="{DynamicResource Brush.TextSecondary}"
+                     FontSize="9"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     Margin="10,2,0,0"/>
+        </StackPanel>
+        <Button x:Name="MinimizeButton"
+                Grid.Column="1"
+                ToolTip="Minimize"
+                PreviewMouseLeftButtonDown="MinimizeWindowMouseDown"
+                Style="{StaticResource WindowCaptionButton}">
+          <Image Source="pack://application:,,,/Assets/caption_minimize.png"
+                 Width="16"
+                 Height="16"
+                 Stretch="Uniform"/>
+        </Button>
+        <Button x:Name="MaximizeButton"
+                Grid.Column="2"
+                ToolTip="Maximize"
+                PreviewMouseLeftButtonDown="MaximizeWindowMouseDown"
+                Style="{StaticResource WindowCaptionButton}">
+          <Grid x:Name="MaximizeIconHost"
+                Width="16"
+                Height="16"
+                RenderTransformOrigin="0.5,0.5">
+            <Grid.RenderTransform>
+              <ScaleTransform/>
+            </Grid.RenderTransform>
+            <Image x:Name="MaximizeIcon"
+                   Source="pack://application:,,,/Assets/caption_maximize.png"
+                   Stretch="Uniform"/>
+            <Image x:Name="RestoreIcon"
+                   Source="pack://application:,,,/Assets/caption_restore.png"
+                   Stretch="Uniform"
+                   Visibility="Collapsed"/>
+          </Grid>
+        </Button>
+        <Button Grid.Column="3"
+                ToolTip="Close"
+                PreviewMouseLeftButtonDown="CloseWindowMouseDown"
+                Style="{StaticResource WindowCloseButton}">
+          <Image Source="pack://application:,,,/Assets/caption_close.png"
+                 Width="16"
+                 Height="16"
+                 Stretch="Uniform"/>
+        </Button>
+      </Grid>
+    </Border>
+    <Grid x:Name="ShellRoot" Grid.Row="1">
     <Grid.ColumnDefinitions>
       <ColumnDefinition x:Name="NavColumn" Width="292" MinWidth="108" MaxWidth="340"/>
       <ColumnDefinition Width="*"/>
@@ -275,5 +368,6 @@
         </Grid>
       </Border>
     </Grid>
+  </Grid>
   </Grid>
 </Window>

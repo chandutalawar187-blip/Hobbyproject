@@ -12,6 +12,8 @@
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Launch when you sign in. Preference is stored locally."/>
           <CheckBox x:Name="StartMinimized" Content="Start minimized"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Open quietly without stealing focus."/>
+          <CheckBox x:Name="RunInTrayOnClose" Content="Keep running in system tray when closed"/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Closing the window hides it and keeps monitoring active until you exit from the tray menu." TextWrapping="Wrap"/>
           <CheckBox x:Name="RememberProfile" Content="Remember last profile"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Restore the last successfully applied application profile on launch."/>
           <CheckBox x:Name="NotificationsEnabled" Content="Notifications" IsChecked="True"/>

@@ -6,12 +6,16 @@ using System.Windows.Threading;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
+using System.Runtime.InteropServices;
 using Forms = System.Windows.Forms;
 using Microsoft.Win32;
 using LenovoLoqControl.Core;
 using LenovoLoqControl.Hardware;
 using LenovoLoqControl.UI;
 using LenovoLoqControl.UI.Shell;
+using Microsoft.Toolkit.Uwp.Notifications;
+using Windows.UI.Notifications;
 
 namespace LenovoLoqControl;
 
@@ -36,6 +40,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        StateChanged += (_, _) => UpdateMaximizeButton();
         Icon = LoadAdaptiveWindowIcon();
         AppUiPreferences.AppearanceChanged += ApplyAppearance;
         Closing += HandleClosing;
@@ -63,6 +68,7 @@ public partial class MainWindow : Window
         ContentHost.Content = _dashboard;
         StatusBarPrimary.Text = "Viewing Dashboard";
         ApplyNavExpandedState(animate: false);
+        UpdateMaximizeButton();
 
         _shellTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
         _shellTimer.Tick += async (_, _) => await RefreshShellStatusAsync();
@@ -450,9 +456,8 @@ public partial class MainWindow : Window
         return icon;
     }
 
-    private static System.Drawing.Icon LoadApplicationIcon()
+    private static System.Drawing.Icon LoadApplicationIcon(string resourceName = "app_icon_black.ico")
     {
-        var resourceName = UseLightLogo() ? "app_icon_white.ico" : "app_icon_black.ico";
         var resource = Application.GetResourceStream(
             new Uri($"pack://application:,,,/Assets/{resourceName}"));
         if (resource is null)
@@ -485,12 +490,6 @@ public partial class MainWindow : Window
         return image;
     }
 
-    private static bool UseLightLogo()
-    {
-        return Application.Current.TryFindResource("Color.Background") is System.Windows.Media.Color color
-            && (color.R * 299 + color.G * 587 + color.B * 114) / 1000 < 150;
-    }
-
     private void HandleClosing(object? sender, CancelEventArgs e)
     {
         if (_allowClose)
@@ -498,11 +497,126 @@ public partial class MainWindow : Window
 
         e.Cancel = true;
         Hide();
-        _trayIcon.ShowBalloonTip(
-            1500,
-            "LOQ Control is still running",
-            "Hardware control remains active in the system tray.",
-            Forms.ToolTipIcon.Info);
+        ShowTrayNotification("LOQ Control is still running", "Hardware control remains active in the system tray.");
+    }
+
+    private void MinimizeWindowMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        AnimateCaptionIcon();
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeWindowMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        AnimateCaptionIcon();
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+        UpdateMaximizeButton();
+    }
+
+    private void CloseWindowMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (AppUiPreferences.RunInTrayOnClose)
+        {
+            Hide();
+            ShowTrayNotification("LOQ Control is still running", "Hardware monitoring remains active in the system tray.");
+            return;
+        }
+
+        _allowClose = true;
+        _trayIcon.Visible = false;
+        Close();
+    }
+
+    private static void ShowTrayNotification(string title, string message)
+    {
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "notification_icon.png");
+            var content = new ToastContentBuilder()
+                .AddText(title)
+                .AddText(message)
+                .AddAppLogoOverride(new Uri(iconPath), ToastGenericAppLogoCrop.Circle)
+                .GetToastContent();
+            ToastNotificationManagerCompat.CreateToastNotifier()
+                .Show(new ToastNotification(content.GetXml()));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException or FileNotFoundException)
+        {
+            // The tray icon remains available if Windows notifications are disabled.
+        }
+    }
+
+    private void TitleBarMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left)
+            return;
+
+        if (FindVisualParent<Button>(e.OriginalSource as DependencyObject) is not null)
+            return;
+
+        e.Handled = true;
+        if (e.ClickCount == 2)
+        {
+            MaximizeWindowMouseDown(sender, e);
+            return;
+        }
+
+        DragMove();
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child)
+        where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T match)
+                return match;
+
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
+    }
+
+    private void AnimateCaptionIcon()
+    {
+        var transform = (ScaleTransform)MaximizeIconHost.RenderTransform;
+        var animation = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(180),
+            KeyFrames =
+            {
+                new EasingDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.Zero)),
+                new EasingDoubleKeyFrame(1.18, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70)))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                },
+                new EasingDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180)))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                }
+            }
+        };
+        transform.BeginAnimation(ScaleTransform.ScaleXProperty, animation);
+        transform.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
+    }
+
+    private void UpdateMaximizeButton()
+    {
+        if (MaximizeButton is null)
+            return;
+
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeIcon.Visibility = maximized ? Visibility.Collapsed : Visibility.Visible;
+        RestoreIcon.Visibility = maximized ? Visibility.Visible : Visibility.Collapsed;
+        MaximizeButton.ToolTip = WindowState == WindowState.Maximized
+            ? "Restore"
+            : "Maximize";
     }
 
     internal void ShowFromAnotherInstance() => Dispatcher.Invoke(ShowFromTray);
