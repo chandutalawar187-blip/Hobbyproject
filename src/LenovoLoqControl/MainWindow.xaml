@@ -244,7 +244,18 @@
                       Click="ProjectsClick"
                       ToolTip="Project workflows and maintenance actions"
                       AutomationProperties.Name="Projects">
-                <TextBlock x:Name="NavProjectsLabel" Text="Projects" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <Image Source="pack://application:,,,/Assets/nav_projects.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Projects icon"/>
+                  <TextBlock x:Name="NavProjectsLabel"
+                             Text="Projects"
+                             Foreground="{DynamicResource Brush.TextPrimary}"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
               </Button>
 
               <Button x:Name="NavDiagnostics"
@@ -252,7 +263,18 @@
                       Click="DiagnosticsClick"
                       ToolTip="Compatibility and capability report"
                       AutomationProperties.Name="Diagnostics">
-                <TextBlock x:Name="NavDiagnosticsLabel" Text="Diagnostics" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <Image Source="pack://application:,,,/Assets/nav_diagnostics.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Diagnostics icon"/>
+                  <TextBlock x:Name="NavDiagnosticsLabel"
+                             Text="Diagnostics"
+                             Foreground="{DynamicResource Brush.TextPrimary}"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
               </Button>
 
               <Button x:Name="NavSettings"
@@ -260,7 +282,18 @@
                       Click="SettingsClick"
                       ToolTip="Preferences and Lenovo integration"
                       AutomationProperties.Name="Settings">
-                <TextBlock x:Name="NavSettingsLabel" Text="Settings" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <Image Source="pack://application:,,,/Assets/nav_settings.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Settings icon"/>
+                  <TextBlock x:Name="NavSettingsLabel"
+                             Text="Settings"
+                             Foreground="{DynamicResource Brush.TextPrimary}"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
               </Button>
             </StackPanel>
 
