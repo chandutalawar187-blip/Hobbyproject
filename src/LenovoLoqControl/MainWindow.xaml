@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
         xmlns:shell="clr-namespace:LenovoLoqControl.UI.Shell"
         Title="LOQ Control"
+        Foreground="{DynamicResource Brush.TextPrimary}"
         Width="1280" Height="800"
         MinWidth="960" MinHeight="640"
         Background="{StaticResource Brush.BackgroundGradient}"

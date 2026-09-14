@@ -28,6 +28,7 @@ public partial class SettingsView : UserControl
             ? "Provider status · Ready for firmware mode commands"
             : $"Provider status · {_hardware.FanController.AvailabilityMessage}";
         ReducedMotion.IsChecked = AppUiPreferences.ReducedMotion;
+        AppearanceMode.SelectedValue = AppUiPreferences.Appearance.ToString();
         ReducedMotion.Checked += (_, _) => AppUiPreferences.ReducedMotion = true;
         ReducedMotion.Unchecked += (_, _) => AppUiPreferences.ReducedMotion = false;
         Loaded += async (_, _) =>
@@ -37,6 +38,13 @@ public partial class SettingsView : UserControl
             await CheckForUpdatesAsync();
         };
         Unloaded += (_, _) => _updateCts?.Cancel();
+    }
+
+    private void AppearanceModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (AppearanceMode.SelectedValue is string value
+            && Enum.TryParse<AppearanceMode>(value, out var mode))
+            AppUiPreferences.SetAppearance(mode);
     }
 
     private async void CheckUpdatesClick(object sender, RoutedEventArgs e) =>

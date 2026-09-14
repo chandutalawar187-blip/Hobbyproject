@@ -21,7 +21,7 @@ public partial class MainWindow : Window
     private readonly DashboardView _dashboard;
     private readonly DispatcherTimer _shellTimer;
     private readonly Button[] _navButtons;
-    private readonly Forms.NotifyIcon _trayIcon;
+    private Forms.NotifyIcon _trayIcon;
     private bool _allowClose;
     private bool _refreshingShell;
     private int _shellDensity = -1;
@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Icon = LoadAdaptiveWindowIcon();
+        AppUiPreferences.AppearanceChanged += ApplyAppearance;
         Closing += HandleClosing;
         _trayIcon = CreateTrayIcon();
 
@@ -81,6 +82,14 @@ public partial class MainWindow : Window
 
     private void OnUiPreferencesChanged() =>
         Dispatcher.Invoke(ApplyMotionPreference);
+
+    private void ApplyAppearance()
+    {
+        AppearanceManager.Apply(AppUiPreferences.Appearance);
+        Icon = LoadAdaptiveWindowIcon();
+        _trayIcon?.Dispose();
+        _trayIcon = CreateTrayIcon();
+    }
 
     private void ApplyMotionPreference()
     {
@@ -412,6 +421,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         AppUiPreferences.Changed -= OnUiPreferencesChanged;
+        AppUiPreferences.AppearanceChanged -= ApplyAppearance;
         _shellTimer?.Stop();
         _hardware.Dispose();
         _trayIcon?.Dispose();

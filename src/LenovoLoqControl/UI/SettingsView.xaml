@@ -18,6 +18,17 @@
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,8" Text="Show accept/reject toasts for firmware commands when enabled."/>
           <CheckBox x:Name="ReducedMotion" Content="Reduced motion"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="28,0,0,0" Text="Disable telemetry easing, page transitions, and decorative motion."/>
+          <TextBlock Style="{StaticResource Text.Caption}" Margin="0,14,0,6" Text="APPEARANCE"/>
+          <ComboBox x:Name="AppearanceMode"
+                    Width="220"
+                    HorizontalAlignment="Left"
+                    SelectedValuePath="Tag"
+                    SelectionChanged="AppearanceModeChanged">
+            <ComboBoxItem Content="System default" Tag="System"/>
+            <ComboBoxItem Content="Dark" Tag="Dark"/>
+            <ComboBoxItem Content="Light" Tag="Light"/>
+          </ComboBox>
+          <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,8,0,0" Text="System default follows your Windows app theme. The logo and application text adapt for contrast." TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
 

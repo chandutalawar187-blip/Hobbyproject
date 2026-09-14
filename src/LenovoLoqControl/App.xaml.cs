@@ -2,6 +2,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using LenovoLoqControl.Services;
+using LenovoLoqControl.UI;
 
 namespace LenovoLoqControl;
 
@@ -38,6 +39,7 @@ public partial class App : Application
         };
 
         base.OnStartup(e);
+        AppearanceManager.Apply(AppearanceMode.System);
         if (!SingleInstanceService.TryCreate(out _singleInstance))
         {
             SingleInstanceService.ActivateExisting();
