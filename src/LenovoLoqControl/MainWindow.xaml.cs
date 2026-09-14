@@ -457,7 +457,7 @@ public partial class MainWindow : Window
 
     private static BitmapImage LoadAdaptiveWindowIcon()
     {
-        var resourceName = UseLightLogo() ? "app_icon_white.ico" : "app_icon_black.ico";
+        var resourceName = UseLightLogo() ? "app_icon_white.png" : "app_icon_black.png";
         var resource = Application.GetResourceStream(
             new Uri($"pack://application:,,,/Assets/{resourceName}"))
             ?? throw new IOException($"The adaptive icon resource '{resourceName}' is unavailable.");
