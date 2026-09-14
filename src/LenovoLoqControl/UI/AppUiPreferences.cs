@@ -12,17 +12,6 @@ public static class AppUiPreferences
     private static bool? _runInTrayOnClose;
 
     public static event Action? Changed;
-    public static event Action? AppearanceChanged;
-
-    public static AppearanceMode Appearance { get; set; } = AppearanceMode.System;
-
-    public static void SetAppearance(AppearanceMode mode)
-    {
-        if (Appearance == mode) return;
-        Appearance = mode;
-        AppearanceChanged?.Invoke();
-    }
-
     public static bool ReducedMotion
     {
         get => _reducedMotion;

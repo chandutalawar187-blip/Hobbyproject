@@ -42,7 +42,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         StateChanged += (_, _) => UpdateMaximizeButton();
         Icon = LoadAdaptiveWindowIcon();
-        AppUiPreferences.AppearanceChanged += ApplyAppearance;
         Closing += HandleClosing;
         _trayIcon = CreateTrayIcon();
 
@@ -88,14 +87,6 @@ public partial class MainWindow : Window
 
     private void OnUiPreferencesChanged() =>
         Dispatcher.Invoke(ApplyMotionPreference);
-
-    private void ApplyAppearance()
-    {
-        AppearanceManager.Apply(AppUiPreferences.Appearance);
-        Icon = LoadAdaptiveWindowIcon();
-        _trayIcon?.Dispose();
-        _trayIcon = CreateTrayIcon();
-    }
 
     private void ApplyMotionPreference()
     {
@@ -427,7 +418,6 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         AppUiPreferences.Changed -= OnUiPreferencesChanged;
-        AppUiPreferences.AppearanceChanged -= ApplyAppearance;
         _shellTimer?.Stop();
         _hardware.Dispose();
         _trayIcon?.Dispose();

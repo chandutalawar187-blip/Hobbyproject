@@ -29,7 +29,6 @@ public partial class SettingsView : UserControl
             : $"Provider status · {_hardware.FanController.AvailabilityMessage}";
         ReducedMotion.IsChecked = AppUiPreferences.ReducedMotion;
         RunInTrayOnClose.IsChecked = AppUiPreferences.RunInTrayOnClose;
-        AppearanceMode.SelectedValue = AppUiPreferences.Appearance.ToString();
         ReducedMotion.Checked += (_, _) => AppUiPreferences.ReducedMotion = true;
         ReducedMotion.Unchecked += (_, _) => AppUiPreferences.ReducedMotion = false;
         RunInTrayOnClose.Checked += (_, _) => AppUiPreferences.RunInTrayOnClose = true;
@@ -41,13 +40,6 @@ public partial class SettingsView : UserControl
             await CheckForUpdatesAsync();
         };
         Unloaded += (_, _) => _updateCts?.Cancel();
-    }
-
-    private void AppearanceModeChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (AppearanceMode.SelectedValue is string value
-            && Enum.TryParse<AppearanceMode>(value, out var mode))
-            AppUiPreferences.SetAppearance(mode);
     }
 
     private async void CheckUpdatesClick(object sender, RoutedEventArgs e) =>

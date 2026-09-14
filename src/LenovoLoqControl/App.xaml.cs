@@ -39,7 +39,6 @@ public partial class App : Application
         };
 
         base.OnStartup(e);
-        AppearanceManager.Apply(AppearanceMode.System);
         if (!SingleInstanceService.TryCreate(out _singleInstance))
         {
             SingleInstanceService.ActivateExisting();
