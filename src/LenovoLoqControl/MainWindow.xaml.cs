@@ -457,7 +457,9 @@ public partial class MainWindow : Window
 
     private static BitmapImage LoadAdaptiveWindowIcon()
     {
-        var resourceName = UseLightLogo() ? "app_icon_white.png" : "app_icon_black.png";
+        // Windows renders the title bar as a light system surface on the affected
+        // configuration, so use the dark logo there. The tray icon remains adaptive.
+        const string resourceName = "app_icon_black.png";
         var resource = Application.GetResourceStream(
             new Uri($"pack://application:,,,/Assets/{resourceName}"))
             ?? throw new IOException($"The adaptive icon resource '{resourceName}' is unavailable.");
