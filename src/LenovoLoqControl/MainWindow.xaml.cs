@@ -609,6 +609,13 @@ public partial class MainWindow : Window
 
     internal void ShowFromAnotherInstance() => Dispatcher.Invoke(ShowFromTray);
 
+    internal void CloseFromAnotherInstance()
+    {
+        _allowClose = true;
+        _trayIcon.Visible = false;
+        Close();
+    }
+
     private void ShowFromTray()
     {
         Show();

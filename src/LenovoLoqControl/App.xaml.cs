@@ -41,16 +41,49 @@ public partial class App : Application
         base.OnStartup(e);
         if (!SingleInstanceService.TryCreate(out _singleInstance))
         {
-            SingleInstanceService.ActivateExisting();
-            Shutdown();
+            var answer = MessageBox.Show(
+                "LOQ Control is already running. Close the current instance and open this version instead?",
+                "LOQ Control is already running",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Yes)
+            {
+                SingleInstanceService.ActivateExisting(requestClose: true);
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline
+                       && !SingleInstanceService.TryCreate(out _singleInstance))
+                    Thread.Sleep(100);
+
+                if (_singleInstance is not null)
+                    StartMainWindow(_singleInstance);
+            }
+            else
+            {
+                SingleInstanceService.ActivateExisting(requestClose: false);
+            }
+
+            if (_singleInstance is null)
+                Shutdown();
             return;
         }
 
         var singleInstance = _singleInstance
             ?? throw new InvalidOperationException("The single-instance guard was not initialized.");
+        StartMainWindow(singleInstance);
+    }
+
+    private void StartMainWindow(SingleInstanceService singleInstance)
+    {
         var window = new MainWindow();
         MainWindow = window;
-        singleInstance.ActivationRequested += () => Dispatcher.Invoke(window.ShowFromAnotherInstance);
+        singleInstance.ActivationRequested += close =>
+            Dispatcher.Invoke(() =>
+            {
+                if (close)
+                    window.CloseFromAnotherInstance();
+                else
+                    window.ShowFromAnotherInstance();
+            });
         window.Show();
         _startupCompleted = true;
     }

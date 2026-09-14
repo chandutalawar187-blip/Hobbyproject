@@ -17,7 +17,7 @@ public sealed class SingleInstanceService : IDisposable
         _mutex = mutex;
     }
 
-    public event Action? ActivationRequested;
+    public event Action<bool>? ActivationRequested;
 
     public static bool TryCreate(out SingleInstanceService? instance)
     {
@@ -34,13 +34,13 @@ public sealed class SingleInstanceService : IDisposable
         return true;
     }
 
-    public static void ActivateExisting()
+    public static void ActivateExisting(bool requestClose)
     {
         try
         {
             using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
             client.Connect(1000);
-            var message = Encoding.UTF8.GetBytes("activate");
+            var message = Encoding.UTF8.GetBytes(requestClose ? "close" : "activate");
             client.Write(message, 0, message.Length);
         }
         catch (TimeoutException)
@@ -70,7 +70,9 @@ public sealed class SingleInstanceService : IDisposable
                     await server.WaitForConnectionAsync(_shutdown.Token);
                     var buffer = new byte[32];
                     _ = await server.ReadAsync(buffer, _shutdown.Token);
-                    ActivationRequested?.Invoke();
+                    var message = Encoding.UTF8.GetString(buffer).TrimEnd('\0');
+                    ActivationRequested?.Invoke(
+                        string.Equals(message, "close", StringComparison.OrdinalIgnoreCase));
                 }
                 catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
                 {
