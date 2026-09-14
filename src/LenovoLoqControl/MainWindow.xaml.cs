@@ -30,10 +30,10 @@ public partial class MainWindow : Window
     private bool _refreshingShell;
     private int _shellDensity = -1;
     private bool _navExpanded = true;
-    private double _expandedNavWidth = 292;
+    private double _expandedNavWidth = 224;
     private PageKind _currentPage = PageKind.Dashboard;
 
-    private const double NavExpandedMinWidth = 280;
+    private const double NavExpandedMinWidth = 210;
     // Must fit Fan icon (height × 1.4) + rail padding + button padding.
     private const double NavCollapsedWidth = 108;
 
@@ -303,9 +303,9 @@ public partial class MainWindow : Window
                 ? HorizontalAlignment.Left
                 : HorizontalAlignment.Center;
             button.Padding = _navExpanded
-                ? new Thickness(14, 10, 14, 10)
+                ? new Thickness(8, 8, 8, 8)
                 : new Thickness(4, 10, 4, 10);
-            button.MinHeight = _navExpanded ? 64 : 68;
+            button.MinHeight = _navExpanded ? 48 : 68;
             button.MaxWidth = _navExpanded ? double.PositiveInfinity : 92;
         }
 
@@ -314,12 +314,12 @@ public partial class MainWindow : Window
             : "Expand navigation";
 
         var railPadding = _navExpanded
-            ? new Thickness(18, 24, 16, 22)
+            ? new Thickness(12, 18, 10, 16)
             : new Thickness(8, 18, 8, 16);
         var navWidth = _navExpanded ? _expandedNavWidth : NavCollapsedWidth;
 
         NavColumn.MinWidth = _navExpanded ? NavExpandedMinWidth : NavCollapsedWidth;
-        NavColumn.MaxWidth = _navExpanded ? 340 : NavCollapsedWidth;
+        NavColumn.MaxWidth = _navExpanded ? 250 : NavCollapsedWidth;
 
         if (animate)
         {
@@ -357,16 +357,16 @@ public partial class MainWindow : Window
         else if (width < 1400)
         {
             density = 1;
-            navWidth = 292;
+            navWidth = 224;
             contentPadding = new Thickness(28, 16, 32, 12);
-            railPadding = new Thickness(18, 24, 16, 22);
+            railPadding = new Thickness(12, 18, 10, 16);
         }
         else
         {
             density = 2;
-            navWidth = 320;
+            navWidth = 236;
             contentPadding = new Thickness(36, 18, 40, 14);
-            railPadding = new Thickness(22, 28, 18, 24);
+            railPadding = new Thickness(14, 20, 12, 18);
         }
 
         _expandedNavWidth = navWidth;

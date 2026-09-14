@@ -107,7 +107,7 @@
     </Border>
     <Grid x:Name="ShellRoot" Grid.Row="1">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="NavColumn" Width="292" MinWidth="108" MaxWidth="340"/>
+      <ColumnDefinition x:Name="NavColumn" Width="224" MinWidth="210" MaxWidth="250"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
