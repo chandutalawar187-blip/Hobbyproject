@@ -29,8 +29,7 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _refreshingShell;
     private int _shellDensity = -1;
-    private const bool NavigationAlwaysExpanded = true;
-    private bool _navExpanded = NavigationAlwaysExpanded;
+    private bool _navExpanded = true;
     private double _expandedNavWidth = 220;
     private PageKind _currentPage = PageKind.Dashboard;
 
@@ -274,13 +273,12 @@ public partial class MainWindow : Window
 
     private void NavToggleClick(object sender, RoutedEventArgs e)
     {
-        _navExpanded = NavigationAlwaysExpanded;
-        ApplyNavExpandedState(animate: false);
+        _navExpanded = !_navExpanded;
+        ApplyNavExpandedState(animate: true);
     }
 
     private void ApplyNavExpandedState(bool animate)
     {
-        _navExpanded = NavigationAlwaysExpanded;
         var labelVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
         var detailVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
 
@@ -293,13 +291,25 @@ public partial class MainWindow : Window
         NavFanLabel.Visibility = labelVisibility;
         NavLightingLabel.Visibility = labelVisibility;
         NavProfilesLabel.Visibility = labelVisibility;
-        NavProjects.Visibility = detailVisibility;
-        NavDiagnostics.Visibility = detailVisibility;
-        NavSettings.Visibility = detailVisibility;
+        NavProjectsLabel.Visibility = labelVisibility;
+        NavDiagnosticsLabel.Visibility = labelVisibility;
+        NavSettingsLabel.Visibility = labelVisibility;
 
-        NavDashboard.Visibility = Visibility.Visible;
+        foreach (var button in _navButtons)
+            button.Visibility = Visibility.Visible;
 
-        foreach (var button in new[] { NavFan, NavLighting, NavProfiles })
+        var iconMargin = _navExpanded
+            ? new Thickness(0, 0, 10, 0)
+            : new Thickness(0);
+        NavDashboardIcon.Margin = iconMargin;
+        NavFanIcon.Margin = iconMargin;
+        NavLightingIcon.Margin = iconMargin;
+        NavProfilesIcon.Margin = iconMargin;
+        NavProjectsIcon.Margin = iconMargin;
+        NavDiagnosticsIcon.Margin = iconMargin;
+        NavSettingsIcon.Margin = iconMargin;
+
+        foreach (var button in _navButtons)
         {
             button.HorizontalContentAlignment = _navExpanded
                 ? HorizontalAlignment.Left

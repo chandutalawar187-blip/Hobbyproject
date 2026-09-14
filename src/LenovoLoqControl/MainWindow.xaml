@@ -106,7 +106,7 @@
     </Border>
     <Grid x:Name="ShellRoot" Grid.Row="1">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="NavColumn" Width="220" MinWidth="220" MaxWidth="220"/>
+      <ColumnDefinition x:Name="NavColumn" Width="220" MinWidth="108" MaxWidth="220"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
@@ -129,7 +129,7 @@
                   Click="NavToggleClick"
                   ToolTip="Collapse or expand navigation"
                   AutomationProperties.Name="Toggle navigation"
-                  Visibility="Collapsed">
+                  Visibility="Visible">
             <StackPanel x:Name="HamburgerGlyph" Width="18" VerticalAlignment="Center">
               <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>
               <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>
@@ -254,7 +254,8 @@
                       ToolTip="Project workflows and maintenance actions"
                       AutomationProperties.Name="Projects">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <Image Source="pack://application:,,,/Assets/nav_projects.png"
+                  <Image x:Name="NavProjectsIcon"
+                         Source="pack://application:,,,/Assets/nav_projects.png"
                          Width="30"
                          Height="30"
                          Stretch="Uniform"
@@ -273,7 +274,8 @@
                       ToolTip="Compatibility and capability report"
                       AutomationProperties.Name="Diagnostics">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <Image Source="pack://application:,,,/Assets/nav_diagnostics.png"
+                  <Image x:Name="NavDiagnosticsIcon"
+                         Source="pack://application:,,,/Assets/nav_diagnostics.png"
                          Width="30"
                          Height="30"
                          Stretch="Uniform"
@@ -292,7 +294,8 @@
                       ToolTip="Preferences and Lenovo integration"
                       AutomationProperties.Name="Settings">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <Image Source="pack://application:,,,/Assets/nav_settings.png"
+                  <Image x:Name="NavSettingsIcon"
+                         Source="pack://application:,,,/Assets/nav_settings.png"
                          Width="30"
                          Height="30"
                          Stretch="Uniform"
