@@ -14,6 +14,7 @@ namespace LenovoLoqControl.UI;
 public partial class DiagnosticsView : UserControl
 {
     private readonly IHardwareBackend _hardware;
+    private readonly LibreHardwareMonitorDiagnostics _diagnosticsHardware = new();
     private readonly List<DiagnosticRow> _rows = [];
     private string _reportText = "";
     private bool _actionsStacked;
@@ -143,11 +144,14 @@ public partial class DiagnosticsView : UserControl
             AddRow("ImController / Vantage status", false, DiagnosticKind.Fail, ex.Message);
         }
 
-        var inventory = ReadSystemInventory();
+        var lhm = _diagnosticsHardware.Read();
+        var inventory = ReadSystemInventory(lhm);
         AddRow("Memory inventory", inventory.MemoryAvailable, inventory.MemoryKind, inventory.MemorySummary);
         AddRow("Storage inventory", inventory.StorageAvailable, inventory.StorageKind, inventory.StorageSummary);
         AddRow("SSD temperature", inventory.SsdTemperature is not null, inventory.SsdTemperature is not null ? DiagnosticKind.Ok : DiagnosticKind.Warn,
-            inventory.SsdTemperature is double ssd ? $"{ssd:0.#} °C" : "Unavailable through supported Windows storage interface");
+            inventory.SsdTemperature is double ssd ? $"{ssd:0.#} °C" : "Unavailable through LibreHardwareMonitor");
+        AddRow("LibreHardwareMonitor", lhm.Sensors.Count > 0, lhm.Sensors.Count > 0 ? DiagnosticKind.Ok : DiagnosticKind.Warn,
+            lhm.Sensors.Count > 0 ? $"{lhm.Sensors.Count} read-only sensors available" : "No sensors returned");
         AddRow("Battery information", inventory.BatteryAvailable, inventory.BatteryKind, inventory.BatterySummary);
         AddRow("Graphics adapters", inventory.GraphicsAvailable, inventory.GraphicsKind, inventory.GraphicsSummary);
         AddRow("Display information", inventory.DisplayAvailable, inventory.DisplayKind, inventory.DisplaySummary);
@@ -283,7 +287,7 @@ public partial class DiagnosticsView : UserControl
         sb.AppendLine(new string('-', 92));
         sb.AppendLine($"{"Memory",-24} {inventory.MemorySummary}");
         sb.AppendLine($"{"Storage",-24} {inventory.StorageSummary}");
-        sb.AppendLine($"{"SSD temperature",-24} {Fmt(inventory.SsdTemperature)} °C");
+        sb.AppendLine($"{"SSD temperature",-24} {TemperatureText(inventory.SsdTemperature)}");
         sb.AppendLine($"{"Battery",-24} {inventory.BatterySummary}");
         sb.AppendLine($"{"Graphics",-24} {inventory.GraphicsSummary}");
         sb.AppendLine($"{"Display",-24} {inventory.DisplaySummary}");
@@ -294,14 +298,17 @@ public partial class DiagnosticsView : UserControl
 
     private static string Fmt(double? value) => value is double n ? n.ToString("0.###") : "Unavailable";
 
+    private static string TemperatureText(double? value) =>
+        value is double n ? $"{n:0.###} °C" : "Unavailable";
+
     private static string TrimForColumn(string value, int width) =>
         value.Length <= width ? value : value[..(width - 1)] + "…";
 
-    private static SystemInventory ReadSystemInventory()
+    private static SystemInventory ReadSystemInventory(DiagnosticsHardwareSnapshot lhm)
     {
         var memoryParts = new List<string>();
         var storageParts = new List<string>();
-        double? ssdTemperature = null;
+        double? ssdTemperature = lhm.SsdTemperature;
         var memoryAvailable = false;
         var storageAvailable = false;
         var batteryAvailable = false;
@@ -339,13 +346,6 @@ public partial class DiagnosticsView : UserControl
                 var bus = row["InterfaceType"]?.ToString()?.Trim();
                 storageParts.Add($"{model} · {size:0.#} GB · {media} · {bus}".Trim());
 
-                var smartTemperature = SmartmontoolsTemperatureReader.ReadTemperature(
-                    row["DeviceID"]?.ToString() ?? "",
-                    model);
-                if (smartTemperature is double temperature)
-                    ssdTemperature = ssdTemperature is double current
-                        ? Math.Max(current, temperature)
-                        : temperature;
             }
             storageAvailable = storageParts.Count > 0;
         }

@@ -1,0 +1,9 @@
+LibreHardwareMonitorLib is included as a NuGet dependency.
+
+Project: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
+License: Mozilla Public License 2.0 (MPL-2.0)
+License text: https://www.mozilla.org/en-US/MPL/2.0/
+Third-party notices: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/THIRD-PARTY-NOTICES.txt
+
+The application uses LibreHardwareMonitorLib only for read-only Diagnostics
+hardware sensors. It does not use the library for fan-control commands.

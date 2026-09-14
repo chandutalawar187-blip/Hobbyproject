@@ -16,7 +16,7 @@
       <ComponentRef Id="StartMenuComponent" />
       <ComponentGroupRef Id="AssetComponents" />
       <ComponentGroupRef Id="AssetImageComponents" />
-      <ComponentGroupRef Id="SmartmontoolsComponents" />
+      <ComponentGroupRef Id="LibreHardwareMonitorNotice" />
     </Feature>
 
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -24,7 +24,9 @@
         <Directory Id="AssetsFolder" Name="Assets">
           <Directory Id="AssetImagesFolder" Name="i" />
         </Directory>
-        <Directory Id="SmartmontoolsFolder" Name="smartmontools" />
+        <Directory Id="ThirdPartyFolder" Name="ThirdParty">
+          <Directory Id="LibreHardwareMonitorFolder" Name="LibreHardwareMonitor" />
+        </Directory>
       </Directory>
     </StandardDirectory>
 
@@ -87,12 +89,9 @@
   </Package>
 
   <Fragment>
-      <ComponentGroup Id="SmartmontoolsComponents" Directory="SmartmontoolsFolder">
-        <Component Id="SmartctlRuntime" Guid="*">
-          <File Source="$(var.PublishDir)\smartmontools\smartctl.exe" KeyPath="yes" />
-          <File Source="$(var.PublishDir)\smartmontools\drivedb.h" />
-          <File Source="$(var.PublishDir)\smartmontools\COPYING.txt" />
-          <File Source="$(var.PublishDir)\smartmontools\SOURCE-NOTICE.md" />
+      <ComponentGroup Id="LibreHardwareMonitorNotice" Directory="LibreHardwareMonitorFolder">
+        <Component Id="LibreHardwareMonitorLicense" Guid="*">
+          <File Source="$(var.PublishDir)\ThirdParty\LibreHardwareMonitor\LICENSE-NOTICE.txt" KeyPath="yes" />
         </Component>
       </ComponentGroup>
 

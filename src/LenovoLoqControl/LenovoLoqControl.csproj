@@ -22,34 +22,20 @@
     <InformationalVersion>1.1.7</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="ThirdParty\LibreHardwareMonitor\LICENSE-NOTICE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>ThirdParty\LibreHardwareMonitor\LICENSE-NOTICE.txt</TargetPath>
+    </Content>
     <None Include="Assets\app_icon.png" />
     <PackageReference Include="LottieSharp" Version="2.4.3" />
-    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="9.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
     <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ThirdParty\smartmontools\smartctl.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <TargetPath>smartmontools\smartctl.exe</TargetPath>
-    </Content>
-    <Content Include="ThirdParty\smartmontools\drivedb.h">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <TargetPath>smartmontools\drivedb.h</TargetPath>
-    </Content>
-    <Content Include="ThirdParty\smartmontools\COPYING.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <TargetPath>smartmontools\COPYING.txt</TargetPath>
-    </Content>
-    <Content Include="ThirdParty\smartmontools\SOURCE-NOTICE.md">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <TargetPath>smartmontools\SOURCE-NOTICE.md</TargetPath>
-    </Content>
     <!-- Extracted from .lottie packages for LottieSharp (JSON + image assets). -->
     <Content Include="Assets\GpuIsometric.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
