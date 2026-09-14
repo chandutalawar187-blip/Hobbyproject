@@ -1,7 +1,6 @@
 <Window x:Class="LenovoLoqControl.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:LenovoLoqControl.UI.Controls"
         xmlns:shell="clr-namespace:LenovoLoqControl.UI.Shell"
         xmlns:windowChrome="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="LOQ Control"
@@ -107,7 +106,7 @@
     </Border>
     <Grid x:Name="ShellRoot" Grid.Row="1">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition x:Name="NavColumn" Width="224" MinWidth="210" MaxWidth="250"/>
+      <ColumnDefinition x:Name="NavColumn" Width="220" MinWidth="220" MaxWidth="220"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
@@ -129,7 +128,8 @@
                   Style="{StaticResource Navigation.Hamburger}"
                   Click="NavToggleClick"
                   ToolTip="Collapse or expand navigation"
-                  AutomationProperties.Name="Toggle navigation">
+                  AutomationProperties.Name="Toggle navigation"
+                  Visibility="Collapsed">
             <StackPanel x:Name="HamburgerGlyph" Width="18" VerticalAlignment="Center">
               <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>
               <Border Height="2" CornerRadius="1" Background="{DynamicResource Brush.TextPrimary}" Margin="0,0,0,4"/>

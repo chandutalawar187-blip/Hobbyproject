@@ -29,8 +29,9 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _refreshingShell;
     private int _shellDensity = -1;
-    private bool _navExpanded = true;
-    private double _expandedNavWidth = 224;
+    private const bool NavigationAlwaysExpanded = true;
+    private bool _navExpanded = NavigationAlwaysExpanded;
+    private double _expandedNavWidth = 220;
     private PageKind _currentPage = PageKind.Dashboard;
 
     private const double NavExpandedMinWidth = 210;
@@ -273,12 +274,13 @@ public partial class MainWindow : Window
 
     private void NavToggleClick(object sender, RoutedEventArgs e)
     {
-        _navExpanded = !_navExpanded;
-        ApplyNavExpandedState(animate: true);
+        _navExpanded = NavigationAlwaysExpanded;
+        ApplyNavExpandedState(animate: false);
     }
 
     private void ApplyNavExpandedState(bool animate)
     {
+        _navExpanded = NavigationAlwaysExpanded;
         var labelVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
         var detailVisibility = _navExpanded ? Visibility.Visible : Visibility.Collapsed;
 
@@ -357,14 +359,14 @@ public partial class MainWindow : Window
         else if (width < 1400)
         {
             density = 1;
-            navWidth = 224;
+            navWidth = 220;
             contentPadding = new Thickness(28, 16, 32, 12);
             railPadding = new Thickness(12, 18, 10, 16);
         }
         else
         {
             density = 2;
-            navWidth = 236;
+            navWidth = 220;
             contentPadding = new Thickness(36, 18, 40, 14);
             railPadding = new Thickness(14, 20, 12, 18);
         }
