@@ -32,8 +32,10 @@ public static class AppearanceManager
         {
             resources[pair.Key] = pair.Value;
             if (pair.Key.StartsWith("Color.", StringComparison.Ordinal)
-                && resources[$"Brush.{pair.Key[6..]}"] is SolidColorBrush brush)
-                brush.Color = pair.Value;
+                && resources[$"Brush.{pair.Key[6..]}"] is SolidColorBrush)
+            {
+                resources[$"Brush.{pair.Key[6..]}"] = new SolidColorBrush(pair.Value);
+            }
         }
 
         resources["Brush.BackgroundGradient"] = CreateGradient(
