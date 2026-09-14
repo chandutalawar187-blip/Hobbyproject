@@ -6,8 +6,25 @@
     <StackPanel ui:UiAnimation.StaggerChildrenOnLoad="True">
       <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,0,0,16"
                  Text="Compatibility is reported per capability. Nothing is marked available without a real reading or an accepted command path."/>
-      <Border Style="{StaticResource Panel.Section}">
-        <StackPanel x:Name="CapabilityList"/>
+      <TextBlock Style="{StaticResource Text.Overline}" Text="System identity" Margin="0,0,0,8"/>
+      <Border Style="{StaticResource Panel.Section}" Margin="0,0,0,14">
+        <StackPanel x:Name="IdentityList"/>
+      </Border>
+      <TextBlock Style="{StaticResource Text.Overline}" Text="Live telemetry" Margin="0,0,0,8"/>
+      <Border Style="{StaticResource Panel.Section}" Margin="0,0,0,14">
+        <StackPanel x:Name="TelemetryList"/>
+      </Border>
+      <TextBlock Style="{StaticResource Text.Overline}" Text="Lenovo controls" Margin="0,0,0,8"/>
+      <Border Style="{StaticResource Panel.Section}" Margin="0,0,0,14">
+        <StackPanel x:Name="ControlsList"/>
+      </Border>
+      <TextBlock Style="{StaticResource Text.Overline}" Text="Hardware inventory" Margin="0,0,0,8"/>
+      <Border Style="{StaticResource Panel.Section}" Margin="0,0,0,14">
+        <StackPanel x:Name="InventoryList"/>
+      </Border>
+      <TextBlock Style="{StaticResource Text.Overline}" Text="Platform and services" Margin="0,0,0,8"/>
+      <Border Style="{StaticResource Panel.Section}" Margin="0,0,0,14">
+        <StackPanel x:Name="PlatformList"/>
       </Border>
       <StackPanel x:Name="DiagnosticsActions" Orientation="Horizontal" Margin="0,8,0,12">
         <Button Content="Export diagnostic report" Style="{StaticResource Button.Primary}" Click="ExportClick" Margin="0,0,10,0"/>

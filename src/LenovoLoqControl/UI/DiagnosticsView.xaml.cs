@@ -67,7 +67,11 @@ public partial class DiagnosticsView : UserControl
 
     private async Task BuildReportAsync()
     {
-        CapabilityList.Children.Clear();
+        IdentityList.Children.Clear();
+        TelemetryList.Children.Clear();
+        ControlsList.Children.Clear();
+        InventoryList.Children.Clear();
+        PlatformList.Children.Clear();
         _rows.Clear();
 
         var identity = _hardware.Monitor.Identity;
@@ -237,8 +241,22 @@ public partial class DiagnosticsView : UserControl
         Grid.SetColumn(text, 1);
         row.Children.Add(icon);
         row.Children.Add(text);
-        CapabilityList.Children.Add(row);
+        GetRowPanel(name).Children.Add(row);
     }
+
+    private StackPanel GetRowPanel(string name) => name switch
+    {
+        "Lenovo detected" or "LOQ model detected" => IdentityList,
+        "CPU telemetry (utilization)" or "GPU telemetry (utilization)"
+            or "CPU temperature" or "GPU temperature"
+            or "CPU fan RPM" or "GPU fan RPM" => TelemetryList,
+        "Firmware mode control" or "Current firmware mode"
+            or "Custom fan table" or "Manual fan control"
+            or "Lenovo provider status" => ControlsList,
+        "Memory inventory" or "Storage inventory" or "SSD temperature"
+            or "Battery information" or "Graphics adapters" or "Display information" => InventoryList,
+        _ => PlatformList
+    };
 
     private string BuildTextReport(HardwareIdentity identity, SensorReading? reading, SystemInventory inventory)
     {
@@ -251,24 +269,15 @@ public partial class DiagnosticsView : UserControl
         sb.AppendLine($"Processor    : {identity.Processor}");
         sb.AppendLine($"Lenovo LOQ   : {(identity.IsLenovoLoq ? "Yes" : "No")}");
         sb.AppendLine();
-        sb.AppendLine("CAPABILITY CHECKS");
-        sb.AppendLine(new string('-', 92));
-        sb.AppendLine($"{"STATUS",-8} {"CAPABILITY",-34} {"AVAILABILITY",-15} DETAILS");
-        sb.AppendLine(new string('-', 92));
-        foreach (var row in _rows)
-        {
-            var status = row.Kind switch
-            {
-                DiagnosticKind.Ok => "OK",
-                DiagnosticKind.Warn => "WARN",
-                _ => "FAIL"
-            };
-            var availability = row.Available ? "Available" : "Unavailable";
-            sb.AppendLine($"{status,-8} {TrimForColumn(row.Name, 34),-34} {availability,-15} {row.Detail}");
-        }
+        AppendCapabilitySection(sb, "SYSTEM IDENTITY", _rows.Where(IsIdentityRow));
+        AppendCapabilitySection(sb, "LIVE TELEMETRY", _rows.Where(IsTelemetryRow));
+        AppendCapabilitySection(sb, "LENOVO CONTROLS", _rows.Where(IsControlRow));
+        AppendCapabilitySection(sb, "HARDWARE INVENTORY", _rows.Where(IsInventoryRow));
+        AppendCapabilitySection(sb, "PLATFORM AND SERVICES", _rows.Where(row =>
+            !IsIdentityRow(row) && !IsTelemetryRow(row) && !IsControlRow(row) && !IsInventoryRow(row)));
 
         sb.AppendLine();
-        sb.AppendLine("CURRENT TELEMETRY");
+        sb.AppendLine("TELEMETRY VALUES");
         sb.AppendLine(new string('-', 92));
         if (reading is not null)
         {
@@ -283,20 +292,101 @@ public partial class DiagnosticsView : UserControl
             sb.AppendLine("Telemetry unavailable through the supported interface.");
 
         sb.AppendLine();
-        sb.AppendLine("SYSTEM INVENTORY");
+        sb.AppendLine("INVENTORY DETAILS");
         sb.AppendLine(new string('-', 92));
-        sb.AppendLine($"{"Memory",-24} {inventory.MemorySummary}");
-        sb.AppendLine($"{"Storage",-24} {inventory.StorageSummary}");
-        sb.AppendLine($"{"SSD temperature",-24} {TemperatureText(inventory.SsdTemperature)}");
-        sb.AppendLine($"{"Battery",-24} {inventory.BatterySummary}");
-        sb.AppendLine($"{"Graphics",-24} {inventory.GraphicsSummary}");
-        sb.AppendLine($"{"Display",-24} {inventory.DisplaySummary}");
-        sb.AppendLine($"{"Windows",-24} {inventory.WindowsSummary}");
+        AppendInventoryDetail(sb, "Memory", inventory.MemorySummary);
+        AppendInventoryDetail(sb, "Storage", inventory.StorageSummary);
+        AppendInventoryDetail(sb, "SSD temperature", TemperatureText(inventory.SsdTemperature));
+        AppendInventoryDetail(sb, "Battery", inventory.BatterySummary);
+        AppendInventoryDetail(sb, "Graphics", inventory.GraphicsSummary);
+        AppendInventoryDetail(sb, "Display", inventory.DisplaySummary);
+        AppendInventoryDetail(sb, "Windows", inventory.WindowsSummary);
 
         return sb.ToString();
     }
 
+    private static void AppendCapabilitySection(StringBuilder sb, string title, IEnumerable<DiagnosticRow> rows)
+    {
+        var sectionRows = rows.ToArray();
+        if (sectionRows.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine(title);
+        sb.AppendLine(new string('-', 92));
+        sb.AppendLine($"{"STATUS",-8} {"CAPABILITY",-34} {"AVAILABILITY",-15} DETAILS");
+        sb.AppendLine(new string('-', 92));
+        foreach (var row in sectionRows)
+        {
+            var status = row.Kind switch
+            {
+                DiagnosticKind.Ok => "OK",
+                DiagnosticKind.Warn => "WARN",
+                _ => "FAIL"
+            };
+            var availability = row.Available ? "Available" : "Unavailable";
+            var prefix = $"{status,-8} {TrimForColumn(row.Name, 34),-34} {availability,-15}";
+            var detailLines = WrapReportText(row.Detail, 92 - prefix.Length - 1);
+            sb.AppendLine($"{prefix} {detailLines[0]}");
+            foreach (var detailLine in detailLines.Skip(1))
+                sb.AppendLine($"{new string(' ', prefix.Length)} {detailLine}");
+        }
+    }
+
+    private static IReadOnlyList<string> WrapReportText(string value, int width)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return ["Unavailable"];
+
+        var lines = new List<string>();
+        foreach (var segment in value.Split(" · ", StringSplitOptions.RemoveEmptyEntries))
+        {
+            var words = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var line = "";
+            foreach (var word in words)
+            {
+                if (line.Length > 0 && line.Length + word.Length + 1 > width)
+                {
+                    lines.Add(line);
+                    line = "";
+                }
+
+                line = line.Length == 0 ? word : $"{line} {word}";
+            }
+
+            if (line.Length > 0)
+                lines.Add(line);
+        }
+
+        return lines.Count > 0 ? lines : [value];
+    }
+
+    private static bool IsIdentityRow(DiagnosticRow row) =>
+        row.Name is "Lenovo detected" or "LOQ model detected";
+
+    private static bool IsTelemetryRow(DiagnosticRow row) =>
+        row.Name is "CPU telemetry (utilization)" or "GPU telemetry (utilization)"
+            or "CPU temperature" or "GPU temperature"
+            or "CPU fan RPM" or "GPU fan RPM";
+
+    private static bool IsControlRow(DiagnosticRow row) =>
+        row.Name is "Firmware mode control" or "Current firmware mode"
+            or "Custom fan table" or "Manual fan control"
+            or "Lenovo provider status";
+
+    private static bool IsInventoryRow(DiagnosticRow row) =>
+        row.Name is "Memory inventory" or "Storage inventory" or "SSD temperature"
+            or "Battery information" or "Graphics adapters" or "Display information";
+
     private static string Fmt(double? value) => value is double n ? n.ToString("0.###") : "Unavailable";
+
+    private static void AppendInventoryDetail(StringBuilder sb, string label, string value)
+    {
+        var parts = WrapReportText(value, 64);
+        sb.AppendLine($"{label,-24} {parts[0]}");
+        foreach (var part in parts.Skip(1))
+            sb.AppendLine($"{new string(' ', 24)} {part}");
+    }
 
     private static string TemperatureText(double? value) =>
         value is double n ? $"{n:0.###} °C" : "Unavailable";
@@ -311,9 +401,9 @@ public partial class DiagnosticsView : UserControl
         double? ssdTemperature = lhm.SsdTemperature;
         var memoryAvailable = false;
         var storageAvailable = false;
-        var batteryAvailable = false;
-        var batteryKind = DiagnosticKind.Warn;
-        var batterySummary = "Battery information unavailable";
+        var batteryAvailable = lhm.BatteryAvailable;
+        var batteryKind = batteryAvailable ? DiagnosticKind.Ok : DiagnosticKind.Warn;
+        var batterySummary = lhm.BatterySummary;
 
         try
         {
@@ -386,29 +476,6 @@ public partial class DiagnosticsView : UserControl
             // SSD temperature is optional and often requires vendor storage support.
         }
 
-        try
-        {
-            using var batteries = new ManagementObjectSearcher(
-                "SELECT Name, EstimatedChargeRemaining, BatteryStatus, DesignCapacity, FullChargeCapacity, Chemistry, Status FROM Win32_Battery");
-            var batteryRows = batteries.Get().Cast<ManagementObject>().ToArray();
-            if (batteryRows.Length > 0)
-            {
-                var battery = batteryRows[0];
-                batteryAvailable = true;
-                batteryKind = DiagnosticKind.Ok;
-                var charge = battery["EstimatedChargeRemaining"]?.ToString() ?? "Unavailable";
-                var status = battery["BatteryStatus"]?.ToString() ?? "Unavailable";
-                var design = battery["DesignCapacity"]?.ToString() ?? "Unavailable";
-                var full = battery["FullChargeCapacity"]?.ToString() ?? "Unavailable";
-                var chemistry = battery["Chemistry"]?.ToString() ?? "Unavailable";
-                batterySummary = $"{battery["Name"] ?? "Battery"} · Charge {charge}% · Status {status} · Design {design} mWh · Full {full} mWh · Chemistry {chemistry}";
-            }
-        }
-        catch
-        {
-            batterySummary = "Unable to query Windows battery information";
-        }
-
         var graphicsParts = new List<string>();
         var displayParts = new List<string>();
         try
@@ -435,7 +502,14 @@ public partial class DiagnosticsView : UserControl
                 "SELECT Name, MonitorManufacturer, ScreenWidth, ScreenHeight, PNPDeviceID FROM Win32_DesktopMonitor");
             foreach (ManagementObject display in displays.Get())
             {
-                displayParts.Add($"{display["Name"] ?? "Unknown display"} · {display["MonitorManufacturer"] ?? "Manufacturer unavailable"} · {display["ScreenWidth"] ?? "?"}x{display["ScreenHeight"] ?? "?"} · {display["PNPDeviceID"] ?? "ID unavailable"}");
+                var width = display["ScreenWidth"]?.ToString();
+                var height = display["ScreenHeight"]?.ToString();
+                var resolution = int.TryParse(width, out var parsedWidth)
+                    && int.TryParse(height, out var parsedHeight)
+                    && parsedWidth > 0 && parsedHeight > 0
+                    ? $"{parsedWidth}x{parsedHeight}"
+                    : GetPrimaryDisplayResolution();
+                displayParts.Add($"{display["Name"] ?? "Unknown display"} · {display["MonitorManufacturer"] ?? "Manufacturer unavailable"} · {resolution} · {display["PNPDeviceID"] ?? "ID unavailable"}");
             }
         }
         catch
@@ -485,10 +559,18 @@ public partial class DiagnosticsView : UserControl
             windowsSummary);
     }
 
-    private void ExportClick(object sender, RoutedEventArgs e)
+    private static string GetPrimaryDisplayResolution()
+    {
+        var width = (int)Math.Round(SystemParameters.PrimaryScreenWidth);
+        var height = (int)Math.Round(SystemParameters.PrimaryScreenHeight);
+        return width > 0 && height > 0 ? $"{width}x{height}" : "Resolution unavailable";
+    }
+
+    private async void ExportClick(object sender, RoutedEventArgs e)
     {
         try
         {
+            await BuildReportAsync();
             var path = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
                 $"LOQ-Control-Diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
