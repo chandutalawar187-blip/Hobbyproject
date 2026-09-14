@@ -566,6 +566,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (WindowState == WindowState.Maximized)
+        {
+            var pointer = PointToScreen(e.GetPosition(this));
+            var relativePoint = e.GetPosition(this);
+            var horizontalRatio = ActualWidth > 0
+                ? relativePoint.X / ActualWidth
+                : 0.5;
+
+            WindowState = WindowState.Normal;
+            Left = pointer.X - (Width * horizontalRatio);
+            Top = pointer.Y - relativePoint.Y;
+        }
+
         DragMove();
     }
 
