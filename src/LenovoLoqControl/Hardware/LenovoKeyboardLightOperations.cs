@@ -319,7 +319,12 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
     {
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "rgb-hid.log");
+            var directory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LOQ Control",
+                "Logs");
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "rgb-hid.log");
             File.AppendAllText(path, $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
         }
         catch (IOException)

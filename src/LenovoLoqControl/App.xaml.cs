@@ -15,13 +15,14 @@ public partial class App : Application
     {
         DispatcherUnhandledException += (_, args) =>
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "startup-error.log");
+            var path = GetLogPath("startup-error.log");
             var exception = Unwrap(args.Exception);
             try
             {
                 File.AppendAllText(path,
                     $"{DateTimeOffset.Now:u} startupCompleted={_startupCompleted} {exception}{Environment.NewLine}");
             }
+
             catch
             {
                 // Diagnostics must never prevent the error from being shown.
@@ -70,6 +71,16 @@ public partial class App : Application
         var singleInstance = _singleInstance
             ?? throw new InvalidOperationException("The single-instance guard was not initialized.");
         StartMainWindow(singleInstance);
+    }
+
+    private static string GetLogPath(string fileName)
+    {
+        var directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LOQ Control",
+            "Logs");
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, fileName);
     }
 
     private void StartMainWindow(SingleInstanceService singleInstance)
