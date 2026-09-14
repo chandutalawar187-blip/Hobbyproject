@@ -297,33 +297,6 @@ public partial class MainWindow : Window
 
         NavDashboard.Visibility = Visibility.Visible;
 
-        NavDashboardIcon.LabelVisible = _navExpanded;
-        NavFanIcon.LabelVisible = _navExpanded;
-        NavLightingIcon.LabelVisible = _navExpanded;
-        NavProfilesIcon.LabelVisible = _navExpanded;
-
-        // Collapsed rail: size icons to fit column width (Fan is wide at AspectRatio 1.4).
-        // Keep ZoomScale at 1 — values >1 crop the animation inside the view.
-        if (_navExpanded)
-        {
-            NavDashboardIcon.IconSize = 40d;
-            NavFanIcon.IconSize = 44d;
-            NavLightingIcon.IconSize = 40d;
-            NavProfilesIcon.IconSize = 40d;
-        }
-        else
-        {
-            // Available ≈ NavCollapsedWidth - railPad*2 - buttonPad*2
-            // 108 - 16 - 8 = 84 → Fan height = 84 / 1.4 ≈ 60, clamp for balance
-            NavDashboardIcon.IconSize = 44d;
-            NavFanIcon.IconSize = 48d;
-            NavLightingIcon.IconSize = 44d;
-            NavProfilesIcon.IconSize = 44d;
-        }
-
-        NavFanIcon.ZoomScale = 1d;
-        NavLightingIcon.ZoomScale = 1d;
-
         foreach (var button in new[] { NavFan, NavLighting, NavProfiles })
         {
             button.HorizontalContentAlignment = _navExpanded

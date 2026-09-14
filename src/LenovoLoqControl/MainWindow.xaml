@@ -186,10 +186,13 @@
                       AutomationProperties.Name="Dashboard"
                       AutomationProperties.HelpText="System overview and live telemetry">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <controls:NavLottieIcon x:Name="NavDashboardIcon"
-                                          AssetFileName="Laptop_Control_Center.lottie"
-                                          IconSize="40"
-                                          AutomationProperties.Name="Dashboard icon"/>
+                  <Image x:Name="NavDashboardIcon"
+                         Source="pack://application:,,,/Assets/nav_dashboard.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Dashboard icon"/>
                   <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
@@ -200,12 +203,13 @@
                       ToolTip="Firmware fan modes, fixed speed, and curves"
                       AutomationProperties.Name="Fan Control">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <controls:NavLottieIcon x:Name="NavFanIcon"
-                                          AssetFileName="GpuIsometric.json"
-                                          IconSize="44"
-                                          AspectRatio="1.4"
-                                          ZoomScale="1"
-                                          AutomationProperties.Name="Fan Control icon"/>
+                  <Image x:Name="NavFanIcon"
+                         Source="pack://application:,,,/Assets/nav_fan.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Fan Control icon"/>
                   <TextBlock x:Name="NavFanLabel" Text="Fan Control" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
@@ -216,11 +220,13 @@
                       ToolTip="Keyboard backlight and RGB effects"
                       AutomationProperties.Name="Lighting">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <controls:NavLottieIcon x:Name="NavLightingIcon"
-                                          AssetFileName="RgbCircle.json"
-                                          IconSize="40"
-                                          ZoomScale="1"
-                                          AutomationProperties.Name="Lighting icon"/>
+                  <Image x:Name="NavLightingIcon"
+                         Source="pack://application:,,,/Assets/nav_lighting.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Lighting icon"/>
                   <TextBlock x:Name="NavLightingLabel" Text="Lighting" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
@@ -231,10 +237,13 @@
                       ToolTip="Quiet, Balanced, Performance, and Custom intents"
                       AutomationProperties.Name="Profiles">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                  <controls:NavLottieIcon x:Name="NavProfilesIcon"
-                                          AssetFileName="TaskNav.gif"
-                                          IconSize="40"
-                                          AutomationProperties.Name="Profiles icon"/>
+                  <Image x:Name="NavProfilesIcon"
+                         Source="pack://application:,,,/Assets/nav_profiles.png"
+                         Width="30"
+                         Height="30"
+                         Stretch="Uniform"
+                         Margin="0,0,10,0"
+                         AutomationProperties.Name="Profiles icon"/>
                   <TextBlock x:Name="NavProfilesLabel" Text="Profiles" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
