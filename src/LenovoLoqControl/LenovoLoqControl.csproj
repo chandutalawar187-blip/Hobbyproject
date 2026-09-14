@@ -39,12 +39,14 @@
     <!-- Extracted from .lottie packages for LottieSharp (JSON + image assets). -->
     <Content Include="Assets\GpuIsometric.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="Assets\RgbCircle.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Task.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="Assets\TaskNav.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
