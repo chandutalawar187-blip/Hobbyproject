@@ -97,7 +97,7 @@
                                           AssetFileName="Laptop_Control_Center.lottie"
                                           IconSize="40"
                                           AutomationProperties.Name="Dashboard icon"/>
-                  <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" VerticalAlignment="Center"/>
+                  <TextBlock x:Name="NavDashboardLabel" Text="Dashboard" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
 
@@ -113,7 +113,7 @@
                                           AspectRatio="1.4"
                                           ZoomScale="1"
                                           AutomationProperties.Name="Fan Control icon"/>
-                  <TextBlock x:Name="NavFanLabel" Text="Fan Control" VerticalAlignment="Center"/>
+                  <TextBlock x:Name="NavFanLabel" Text="Fan Control" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
 
@@ -128,7 +128,7 @@
                                           IconSize="40"
                                           ZoomScale="1"
                                           AutomationProperties.Name="Lighting icon"/>
-                  <TextBlock x:Name="NavLightingLabel" Text="Lighting" VerticalAlignment="Center"/>
+                  <TextBlock x:Name="NavLightingLabel" Text="Lighting" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
 
@@ -142,7 +142,7 @@
                                           AssetFileName="TaskNav.gif"
                                           IconSize="40"
                                           AutomationProperties.Name="Profiles icon"/>
-                  <TextBlock x:Name="NavProfilesLabel" Text="Profiles" VerticalAlignment="Center"/>
+                  <TextBlock x:Name="NavProfilesLabel" Text="Profiles" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
 
@@ -151,7 +151,7 @@
                       Click="ProjectsClick"
                       ToolTip="Project workflows and maintenance actions"
                       AutomationProperties.Name="Projects">
-                <TextBlock x:Name="NavProjectsLabel" Text="Projects" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavProjectsLabel" Text="Projects" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
               </Button>
 
               <Button x:Name="NavDiagnostics"
@@ -159,7 +159,7 @@
                       Click="DiagnosticsClick"
                       ToolTip="Compatibility and capability report"
                       AutomationProperties.Name="Diagnostics">
-                <TextBlock x:Name="NavDiagnosticsLabel" Text="Diagnostics" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavDiagnosticsLabel" Text="Diagnostics" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
               </Button>
 
               <Button x:Name="NavSettings"
@@ -167,7 +167,7 @@
                       Click="SettingsClick"
                       ToolTip="Preferences and Lenovo integration"
                       AutomationProperties.Name="Settings">
-                <TextBlock x:Name="NavSettingsLabel" Text="Settings" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavSettingsLabel" Text="Settings" Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
               </Button>
             </StackPanel>
 

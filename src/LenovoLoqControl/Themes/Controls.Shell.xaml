@@ -10,7 +10,7 @@
   </Style>
 
   <Style x:Key="Shell.StatusBar" TargetType="Border">
-    <Setter Property="Background" Value="#0C1016"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Navigation}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderSubtle}"/>
     <Setter Property="BorderThickness" Value="0,1,0,0"/>
     <Setter Property="Padding" Value="20,8"/>

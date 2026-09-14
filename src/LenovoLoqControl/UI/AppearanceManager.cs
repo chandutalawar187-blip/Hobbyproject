@@ -29,7 +29,12 @@ public static class AppearanceManager
         var resources = Application.Current.Resources;
         var palette = IsDark ? DarkPalette : LightPalette;
         foreach (var pair in palette)
+        {
             resources[pair.Key] = pair.Value;
+            if (pair.Key.StartsWith("Color.", StringComparison.Ordinal)
+                && resources[$"Brush.{pair.Key[6..]}"] is SolidColorBrush brush)
+                brush.Color = pair.Value;
+        }
 
         resources["Brush.BackgroundGradient"] = CreateGradient(
             IsDark ? Color.FromRgb(10, 13, 18) : Color.FromRgb(247, 248, 250),
