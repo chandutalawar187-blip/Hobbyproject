@@ -3,7 +3,7 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="LOQ Control"
            Manufacturer="LOQ Control"
-           Version="1.2.1"
+           Version="1.2.2"
            UpgradeCode="{8E4E5B57-0B7F-4A58-9BA4-8DC0B9D45F14}"
            Scope="perMachine">
     <SummaryInformation Description="Native Lenovo LOQ fan control and telemetry." />
@@ -26,9 +26,11 @@
 
     <Feature Id="MainFeature" Title="LOQ Control" Level="1">
       <ComponentRef Id="ApplicationComponent" />
+      <ComponentRef Id="HardwareServiceComponent" />
       <ComponentRef Id="StartMenuComponent" />
       <ComponentRef Id="DesktopShortcutComponent" />
       <ComponentGroupRef Id="PublishedFiles" />
+      <ComponentGroupRef Id="HardwareServiceFiles" />
     </Feature>
 
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -39,6 +41,7 @@
         <Directory Id="ThirdPartyFolder" Name="ThirdParty">
           <Directory Id="LibreHardwareMonitorFolder" Name="LibreHardwareMonitor" />
         </Directory>
+        <Directory Id="HardwareServiceFolder" Name="HardwareService" />
       </Directory>
     </StandardDirectory>
 
@@ -65,6 +68,30 @@
         <RemoveFile Id="RemoveLegacyRgbLog"
                     Name="rgb-hid.log"
                     On="both" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="HardwareServiceFolder">
+      <Component Id="HardwareServiceComponent" Guid="*">
+        <File Id="LoqControlHardwareServiceExe"
+              Source="$(var.ServicePublishDir)\LenovoLoqControlService.exe"
+              KeyPath="yes">
+        </File>
+        <ServiceInstall Id="LoqControlHardwareServiceInstall"
+                        Name="LoqControlHardwareService"
+                        DisplayName="LOQ Control Hardware Service"
+                        Description="Provides verified elevated Lenovo LOQ hardware control and telemetry."
+                        Start="auto"
+                        Account="LocalSystem"
+                        ErrorControl="normal"
+                        Type="ownProcess"
+                        Vital="yes" />
+        <ServiceControl Id="LoqControlHardwareServiceControl"
+                        Name="LoqControlHardwareService"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall"
+                        Wait="yes" />
       </Component>
     </DirectoryRef>
 

@@ -2,11 +2,22 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $publishDir = Join-Path $root "artifacts\LoqControl"
+$servicePublishDir = Join-Path $root "artifacts\LoqControlService"
+$serviceBuildDir = Join-Path $root "artifacts\service-build"
 $outputDir = Join-Path $root "artifacts\release"
+$releaseVersion = "1.2.2"
 $generatedWxs = Join-Path $outputDir "PublishedFiles.generated.wxs"
+$generatedServiceWxs = Join-Path $outputDir "HardwareServiceFiles.generated.wxs"
 
 if (-not (Test-Path (Join-Path $publishDir "LoqControl.exe"))) {
     throw "Publish output is missing. Run dotnet publish first."
+}
+
+dotnet publish (Join-Path $root "src\LenovoLoqControlService\LenovoLoqControlService.csproj") `
+    -c Release -r win-x64 --self-contained true -p:Platform=x64 `
+    -p:BaseOutputPath=$serviceBuildDir -o $servicePublishDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Service publish failed with exit code $LASTEXITCODE."
 }
 
 $sourceAnimation = Join-Path $root "src\LenovoLoqControl\Assets\Laptop_Control_Center.lottie"
@@ -86,18 +97,70 @@ $writer.WriteEndElement()
 $writer.WriteEndDocument()
 $writer.Dispose()
 
+$serviceWriter = [System.Xml.XmlWriter]::Create($generatedServiceWxs, $xml)
+$serviceWriter.WriteStartElement("Wix", "http://wixtoolset.org/schemas/v4/wxs")
+$serviceWriter.WriteStartElement("Fragment")
+$serviceWriter.WriteStartElement("DirectoryRef")
+$serviceWriter.WriteAttributeString("Id", "HardwareServiceFolder")
+$serviceFiles = @(Get-ChildItem $servicePublishDir -Recurse -File |
+    Where-Object { $_.Name -ne "LenovoLoqControlService.exe" } |
+    ForEach-Object {
+        [pscustomobject]@{
+            File = $_
+            Relative = [System.IO.Path]::GetRelativePath($servicePublishDir, $_.FullName)
+        }
+    })
+$serviceDirectoryIds = @{}
+foreach ($entry in $serviceFiles) {
+    $directory = [System.IO.Path]::GetDirectoryName($entry.Relative)
+    if ([string]::IsNullOrEmpty($directory) -or $serviceDirectoryIds.ContainsKey($directory)) { continue }
+    $directoryId = "ServicePublishedDirectory" + ($directory -replace '[^A-Za-z0-9]', '')
+    $serviceDirectoryIds[$directory] = $directoryId
+    $serviceWriter.WriteStartElement("Directory")
+    $serviceWriter.WriteAttributeString("Id", $directoryId)
+    $serviceWriter.WriteAttributeString("Name", [System.IO.Path]::GetFileName($directory))
+    $serviceWriter.WriteEndElement()
+}
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteStartElement("ComponentGroup")
+$serviceWriter.WriteAttributeString("Id", "HardwareServiceFiles")
+$serviceIndex = 0
+foreach ($entry in $serviceFiles) {
+    $serviceIndex++
+    $directory = [System.IO.Path]::GetDirectoryName($entry.Relative)
+    $directoryId = if ([string]::IsNullOrEmpty($directory)) { "HardwareServiceFolder" } else { $serviceDirectoryIds[$directory] }
+    $serviceWriter.WriteStartElement("Component")
+    $serviceWriter.WriteAttributeString("Id", "ServicePublishedFile$serviceIndex")
+    $serviceWriter.WriteAttributeString("Guid", "*")
+    $serviceWriter.WriteAttributeString("Directory", $directoryId)
+    $serviceWriter.WriteStartElement("File")
+    $serviceWriter.WriteAttributeString("Id", "ServicePublishedFileEntry$serviceIndex")
+    $serviceWriter.WriteAttributeString("Source", (Join-Path '$(var.ServicePublishDir)' $entry.Relative))
+    $serviceWriter.WriteAttributeString("KeyPath", "yes")
+    $serviceWriter.WriteEndElement()
+    $serviceWriter.WriteEndElement()
+}
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteEndDocument()
+$serviceWriter.Dispose()
+
 wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `
     $generatedWxs `
+    $generatedServiceWxs `
     -arch x64 `
     -d PublishDir=$publishDir `
+    -d ServicePublishDir=$servicePublishDir `
     -d SourceDir=$PSScriptRoot `
     -ext WixToolset.UI.wixext `
     -ext WixToolset.Util.wixext `
-    -o (Join-Path $outputDir "LOQ-Control-1.2.1-x64.msi")
+    -o (Join-Path $outputDir "LOQ-Control-$releaseVersion-x64.msi")
 
 if ($LASTEXITCODE -ne 0) {
     throw "WiX failed with exit code $LASTEXITCODE."
 }
 
 Remove-Item $generatedWxs -Force
-Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.2.1-x64.msi')"
+Remove-Item $generatedServiceWxs -Force
+$msiPath = Join-Path $outputDir "LOQ-Control-$releaseVersion-x64.msi"
+Write-Host "Created $msiPath"
