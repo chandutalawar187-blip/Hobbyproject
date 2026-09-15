@@ -4,13 +4,22 @@ $root = Split-Path -Parent $PSScriptRoot
 $publishDir = Join-Path $root "artifacts\LoqControl"
 $servicePublishDir = Join-Path $root "artifacts\LoqControlService"
 $serviceBuildDir = Join-Path $root "artifacts\service-build"
+$appBuildDir = Join-Path $root "artifacts\app-build"
 $outputDir = Join-Path $root "artifacts\release"
-$releaseVersion = "1.2.3"
+$releaseVersion = "1.2.4"
 $generatedWxs = Join-Path $outputDir "PublishedFiles.generated.wxs"
 $generatedServiceWxs = Join-Path $outputDir "HardwareServiceFiles.generated.wxs"
 
-if (-not (Test-Path (Join-Path $publishDir "LoqControl.exe"))) {
-    throw "Publish output is missing. Run dotnet publish first."
+if (Test-Path $publishDir) {
+    Remove-Item $publishDir -Recurse -Force
+}
+New-Item -ItemType Directory -Force $publishDir | Out-Null
+
+dotnet publish (Join-Path $root "src\LenovoLoqControl\LenovoLoqControl.csproj") `
+    -c Release -r win-x64 --self-contained true -p:Platform=x64 `
+    -p:BaseOutputPath=$appBuildDir -o $publishDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Desktop publish failed with exit code $LASTEXITCODE."
 }
 
 dotnet publish (Join-Path $root "src\LenovoLoqControlService\LenovoLoqControlService.csproj") `
