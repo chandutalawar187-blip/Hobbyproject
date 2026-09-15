@@ -11,6 +11,7 @@ public sealed record LenovoVantageStatus(
 
 public sealed class LenovoVantageDisabler
 {
+    private static readonly TimeSpan ElevatedOperationTimeout = TimeSpan.FromSeconds(60);
     private static readonly string[] ServiceNames = ["ImControllerService", "LenovoVantageService"];
     private static readonly string[] ProcessNames = ["LenovoVantage", "Lenovo.Modern.ImController"];
     private static readonly string[] TaskPaths =
@@ -228,7 +229,7 @@ public sealed class LenovoVantageDisabler
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Unable to request administrator access for Lenovo integration.");
-        if (!process.WaitForExit(15000))
+        if (!process.WaitForExit((int)ElevatedOperationTimeout.TotalMilliseconds))
         {
             process.Kill();
             throw new System.TimeoutException("Lenovo integration service operation timed out.");
