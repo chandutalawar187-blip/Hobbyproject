@@ -22,6 +22,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "Desktop publish failed with exit code $LASTEXITCODE."
 }
 
+if (Test-Path $servicePublishDir) {
+    Remove-Item $servicePublishDir -Recurse -Force
+}
+New-Item -ItemType Directory -Force $servicePublishDir | Out-Null
+
 dotnet publish (Join-Path $root "src\LenovoLoqControlService\LenovoLoqControlService.csproj") `
     -c Release -r win-x64 --self-contained true -p:Platform=x64 `
     -p:BaseOutputPath=$serviceBuildDir -o $servicePublishDir
