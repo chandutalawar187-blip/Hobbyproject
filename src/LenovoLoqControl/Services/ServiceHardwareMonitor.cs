@@ -15,6 +15,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     private SensorReading? _lastReading;
     private DateTimeOffset _lastReadingAt;
     private static readonly TimeSpan MaxCachedReadingAge = TimeSpan.FromSeconds(3);
+    private const long MaxTelemetryLogBytes = 256 * 1024;
 
     public ServiceHardwareMonitor(IHardwareMonitor fallback)
     {
@@ -130,10 +131,12 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
             var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "LOQ Control", "Logs");
             Directory.CreateDirectory(directory);
-            File.AppendAllText(Path.Combine(directory, "service-telemetry.log"),
-                $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
+            var path = Path.Combine(directory, "service-telemetry.log");
+            if (File.Exists(path) && new FileInfo(path).Length >= MaxTelemetryLogBytes)
+                File.Move(path, path + ".1", true);
+            File.AppendAllText(path, $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
     }
