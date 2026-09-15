@@ -149,7 +149,7 @@ public partial class DiagnosticsView : UserControl
         }
 
         var lhm = _diagnosticsHardware.Read();
-        var inventory = ReadSystemInventory(lhm);
+        var inventory = await ReadSystemInventoryAsync(lhm);
         AddRow("Memory inventory", inventory.MemoryAvailable, inventory.MemoryKind, inventory.MemorySummary);
         AddRow("Storage inventory", inventory.StorageAvailable, inventory.StorageKind, inventory.StorageSummary);
         AddRow("SSD temperature", inventory.SsdTemperature is not null, inventory.SsdTemperature is not null ? DiagnosticKind.Ok : DiagnosticKind.Warn,
@@ -391,14 +391,33 @@ public partial class DiagnosticsView : UserControl
     private static string TemperatureText(double? value) =>
         value is double n ? $"{n:0.###} °C" : "Unavailable";
 
+    private static void Log(string message)
+    {
+        try
+        {
+            var directory = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LOQ Control", "Logs");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(
+                System.IO.Path.Combine(directory, "diagnostics-hardware.log"),
+                $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
     private static string TrimForColumn(string value, int width) =>
         value.Length <= width ? value : value[..(width - 1)] + "…";
 
-    private static SystemInventory ReadSystemInventory(DiagnosticsHardwareSnapshot lhm)
+    private async Task<SystemInventory> ReadSystemInventoryAsync(DiagnosticsHardwareSnapshot lhm)
     {
         var memoryParts = new List<string>();
         var storageParts = new List<string>();
         double? ssdTemperature = lhm.SsdTemperature;
+        if (ssdTemperature is null && _hardware.Monitor is ServiceHardwareMonitor serviceMonitor)
+            ssdTemperature = await serviceMonitor.ReadSsdTemperatureAsync(CancellationToken.None);
         var memoryAvailable = false;
         var storageAvailable = false;
         var batteryAvailable = lhm.BatteryAvailable;
@@ -471,9 +490,10 @@ public partial class DiagnosticsView : UserControl
                         : temperature;
             }
         }
-        catch
+        catch (Exception ex)
         {
             // SSD temperature is optional and often requires vendor storage support.
+            Log($"Windows SSD temperature fallback failed: {ex.GetType().Name}: {ex.Message}");
         }
 
         var graphicsParts = new List<string>();

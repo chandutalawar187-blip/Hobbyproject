@@ -6,10 +6,16 @@ public static class FanCurveValidator
     {
         var errors = new List<string>();
         if (curve.Points.Count < 2) errors.Add("A curve requires at least two points.");
+        if (curve.Points.Any(p => !double.IsFinite(p.TemperatureCelsius)))
+            errors.Add("Temperature points must be finite numbers.");
+        if (curve.Points.Any(p => !double.IsFinite(p.FanPercent)))
+            errors.Add("Fan output must be a finite number.");
         if (curve.Points.Any(p => p.TemperatureCelsius is < 35 or > 105))
             errors.Add("Temperature points must be between 35°C and 105°C.");
         if (curve.Points.Any(p => p.FanPercent is < 0 or > 100))
             errors.Add("Fan output must be between 0% and 100%.");
+        if (curve.Points.Zip(curve.Points.Skip(1)).Any(pair => pair.Second.TemperatureCelsius <= pair.First.TemperatureCelsius))
+            errors.Add("Temperature points must be strictly increasing.");
         if (curve.Points.Zip(curve.Points.Skip(1)).Any(pair => pair.Second.FanPercent < pair.First.FanPercent))
             errors.Add("Fan output must never decrease as temperature rises.");
         var highTemperature = curve.Points.Where(p => p.TemperatureCelsius >= 85).ToArray();

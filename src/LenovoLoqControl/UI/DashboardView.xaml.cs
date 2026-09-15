@@ -86,6 +86,7 @@ public partial class DashboardView : UserControl
         var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
         var text = mode is FanMode current ? current switch
         {
+            FanMode.Custom => "Custom",
             FanMode.Auto => "Automatic",
             FanMode.MaxCooling => "Max Cooling",
             _ => current.ToString()

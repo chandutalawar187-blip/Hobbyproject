@@ -2,11 +2,36 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $publishDir = Join-Path $root "artifacts\LoqControl"
+$servicePublishDir = Join-Path $root "artifacts\LoqControlService"
+$serviceBuildDir = Join-Path $root "artifacts\service-build"
+$appBuildDir = Join-Path $root "artifacts\app-build"
 $outputDir = Join-Path $root "artifacts\release"
+$releaseVersion = "1.2.6"
 $generatedWxs = Join-Path $outputDir "PublishedFiles.generated.wxs"
+$generatedServiceWxs = Join-Path $outputDir "HardwareServiceFiles.generated.wxs"
 
-if (-not (Test-Path (Join-Path $publishDir "LoqControl.exe"))) {
-    throw "Publish output is missing. Run dotnet publish first."
+if (Test-Path $publishDir) {
+    Remove-Item $publishDir -Recurse -Force
+}
+New-Item -ItemType Directory -Force $publishDir | Out-Null
+
+dotnet publish (Join-Path $root "src\LenovoLoqControl\LenovoLoqControl.csproj") `
+    -c Release -r win-x64 --self-contained true -p:Platform=x64 `
+    -p:BaseOutputPath=$appBuildDir -o $publishDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Desktop publish failed with exit code $LASTEXITCODE."
+}
+
+if (Test-Path $servicePublishDir) {
+    Remove-Item $servicePublishDir -Recurse -Force
+}
+New-Item -ItemType Directory -Force $servicePublishDir | Out-Null
+
+dotnet publish (Join-Path $root "src\LenovoLoqControlService\LenovoLoqControlService.csproj") `
+    -c Release -r win-x64 --self-contained true -p:Platform=x64 `
+    -p:BaseOutputPath=$serviceBuildDir -o $servicePublishDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Service publish failed with exit code $LASTEXITCODE."
 }
 
 $sourceAnimation = Join-Path $root "src\LenovoLoqControl\Assets\Laptop_Control_Center.lottie"
@@ -86,15 +111,99 @@ $writer.WriteEndElement()
 $writer.WriteEndDocument()
 $writer.Dispose()
 
+$serviceWriter = [System.Xml.XmlWriter]::Create($generatedServiceWxs, $xml)
+$serviceWriter.WriteStartElement("Wix", "http://wixtoolset.org/schemas/v4/wxs")
+$serviceWriter.WriteStartElement("Fragment")
+$serviceWriter.WriteStartElement("DirectoryRef")
+$serviceWriter.WriteAttributeString("Id", "HardwareServiceFolder")
+$serviceFiles = @(Get-ChildItem $servicePublishDir -Recurse -File |
+    Where-Object { $_.Name -ne "LenovoLoqControlService.exe" } |
+    ForEach-Object {
+        [pscustomobject]@{
+            File = $_
+            Relative = [System.IO.Path]::GetRelativePath($servicePublishDir, $_.FullName)
+        }
+    })
+$serviceDirectoryIds = @{}
+$serviceDirectories = [System.Collections.Generic.HashSet[string]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
+foreach ($entry in $serviceFiles) {
+    $directory = [System.IO.Path]::GetDirectoryName($entry.Relative)
+    while (-not [string]::IsNullOrEmpty($directory)) {
+        [void]$serviceDirectories.Add($directory)
+        $directory = [System.IO.Path]::GetDirectoryName($directory)
+    }
+}
+
+$serviceDirectoryIndex = 0
+foreach ($directory in ($serviceDirectories | Sort-Object {
+    ($_ -split '[\\/]')
+} | Sort-Object { ($_ -split '[\\/]').Count }, { $_ })) {
+    $serviceDirectoryIndex++
+    $serviceDirectoryIds[$directory] = "ServicePublishedDirectory$serviceDirectoryIndex"
+}
+
+function Write-ServiceDirectory([string]$relativeDirectory) {
+    $serviceWriter.WriteStartElement("Directory")
+    $serviceWriter.WriteAttributeString("Id", $serviceDirectoryIds[$relativeDirectory])
+    $serviceWriter.WriteAttributeString("Name", [System.IO.Path]::GetFileName($relativeDirectory))
+
+    $children = @($serviceDirectories | Where-Object {
+        [System.IO.Path]::GetDirectoryName($_) -eq $relativeDirectory
+    } | Sort-Object)
+    foreach ($child in $children) {
+        Write-ServiceDirectory $child
+    }
+
+    $serviceWriter.WriteEndElement()
+}
+
+$topLevelDirectories = @($serviceDirectories | Where-Object {
+    [string]::IsNullOrEmpty([System.IO.Path]::GetDirectoryName($_))
+} | Sort-Object)
+foreach ($directory in $topLevelDirectories) {
+    Write-ServiceDirectory $directory
+}
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteStartElement("ComponentGroup")
+$serviceWriter.WriteAttributeString("Id", "HardwareServiceFiles")
+$serviceIndex = 0
+foreach ($entry in $serviceFiles) {
+    $serviceIndex++
+    $directory = [System.IO.Path]::GetDirectoryName($entry.Relative)
+    $directoryId = if ([string]::IsNullOrEmpty($directory)) { "HardwareServiceFolder" } else { $serviceDirectoryIds[$directory] }
+    $serviceWriter.WriteStartElement("Component")
+    $serviceWriter.WriteAttributeString("Id", "ServicePublishedFile$serviceIndex")
+    $serviceWriter.WriteAttributeString("Guid", "*")
+    $serviceWriter.WriteAttributeString("Directory", $directoryId)
+    $serviceWriter.WriteStartElement("File")
+    $serviceWriter.WriteAttributeString("Id", "ServicePublishedFileEntry$serviceIndex")
+    $serviceWriter.WriteAttributeString("Source", (Join-Path '$(var.ServicePublishDir)' $entry.Relative))
+    $serviceWriter.WriteAttributeString("KeyPath", "yes")
+    $serviceWriter.WriteEndElement()
+    $serviceWriter.WriteEndElement()
+}
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteEndElement()
+$serviceWriter.WriteEndDocument()
+$serviceWriter.Dispose()
+
 wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `
     $generatedWxs `
+    $generatedServiceWxs `
     -arch x64 `
     -d PublishDir=$publishDir `
-    -o (Join-Path $outputDir "LOQ-Control-1.2.0-x64.msi")
+    -d ServicePublishDir=$servicePublishDir `
+    -d SourceDir=$PSScriptRoot `
+    -ext WixToolset.UI.wixext `
+    -ext WixToolset.Util.wixext `
+    -o (Join-Path $outputDir "LOQ-Control-$releaseVersion-x64.msi")
 
 if ($LASTEXITCODE -ne 0) {
     throw "WiX failed with exit code $LASTEXITCODE."
 }
 
 Remove-Item $generatedWxs -Force
-Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.2.0-x64.msi')"
+Remove-Item $generatedServiceWxs -Force
+$msiPath = Join-Path $outputDir "LOQ-Control-$releaseVersion-x64.msi"
+Write-Host "Created $msiPath"
