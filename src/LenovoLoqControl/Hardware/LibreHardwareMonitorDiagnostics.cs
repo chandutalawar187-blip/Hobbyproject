@@ -206,16 +206,23 @@ internal sealed class LibreHardwareMonitorDiagnostics : IDisposable
             Log($"DiskInfoToolkit storageCount={StorageManager.Storages.Count}");
             foreach (var disk in StorageManager.Storages)
             {
-                disk.Update();
-                var diskTemperature = disk.Smart?.Temperature;
-                Log($"DiskInfoToolkit disk={disk.Model} bus={disk.BusType} nvme={disk.IsNVMe} temperature={diskTemperature}");
-                if (diskTemperature is > 0 and < 150)
-                    temperature = temperature is double current
-                        ? Math.Max(current, diskTemperature.Value)
-                        : diskTemperature.Value;
+                try
+                {
+                    disk.Update();
+                    var diskTemperature = disk.Smart?.Temperature;
+                    Log($"DiskInfoToolkit disk={disk.Model} bus={disk.BusType} nvme={disk.IsNVMe} temperature={diskTemperature}");
+                    if (diskTemperature is > 0 and < 150)
+                        temperature = temperature is double current
+                            ? Math.Max(current, diskTemperature.Value)
+                            : diskTemperature.Value;
 
-                foreach (var attribute in disk.Smart?.SmartAttributes ?? [])
-                    Log($"DiskInfoToolkit smart disk={disk.Model} id={attribute.Info.ID} name={attribute.Info.Name} value={attribute.Attribute}");
+                    foreach (var attribute in disk.Smart?.SmartAttributes ?? [])
+                        Log($"DiskInfoToolkit smart disk={disk.Model} id={attribute.Info.ID} name={attribute.Info.Name} value={attribute.Attribute}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"DiskInfoToolkit disk update failed disk={disk.Model}: {ex}");
+                }
             }
 
             return temperature;

@@ -31,6 +31,7 @@ internal static class Program
 
 internal sealed class LoqHardwareService : ServiceBase
 {
+    private const int MaxRequestBytes = 64 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
@@ -145,14 +146,13 @@ internal sealed class LoqHardwareService : ServiceBase
                     try
                     {
                         await server.WaitForConnectionAsync(cancellationToken);
-                        using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
                         await using var writer = new StreamWriter(server, new UTF8Encoding(false), leaveOpen: true)
                         {
                             AutoFlush = true
                         };
                         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                         requestTimeout.CancelAfter(TimeSpan.FromSeconds(5));
-                        var line = await reader.ReadLineAsync(requestTimeout.Token);
+                        var (line, requestTooLarge) = await ReadRequestAsync(server, requestTimeout.Token);
                         if (!IsAuthorizedClient(server))
                         {
                             LogServiceError("Rejected named-pipe client.");
@@ -160,7 +160,11 @@ internal sealed class LoqHardwareService : ServiceBase
                         }
 
                         ServiceResponse response;
-                        try
+                        if (requestTooLarge)
+                        {
+                            response = new ServiceResponse(false, $"Service requests cannot exceed {MaxRequestBytes} bytes.");
+                        }
+                        else try
                         {
                             response = await HandleRequestAsync(line, cancellationToken);
                         }
@@ -202,6 +206,38 @@ internal sealed class LoqHardwareService : ServiceBase
                 }
             }
         }
+    }
+
+    private static async Task<(string? Line, bool IsOversized)> ReadRequestAsync(
+        Stream stream,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new byte[1024];
+        using var request = new MemoryStream();
+        while (true)
+        {
+            var bytesRead = await stream.ReadAsync(buffer, cancellationToken);
+            if (bytesRead == 0)
+                return (DecodeRequest(request), false);
+
+            var newlineIndex = Array.IndexOf(buffer, (byte)'\n', 0, bytesRead);
+            var payloadLength = newlineIndex >= 0 ? newlineIndex : bytesRead;
+            if (request.Length + payloadLength > MaxRequestBytes)
+                return (null, true);
+
+            request.Write(buffer, 0, payloadLength);
+            if (newlineIndex >= 0)
+                return (DecodeRequest(request), false);
+        }
+    }
+
+    private static string DecodeRequest(MemoryStream request)
+    {
+        var buffer = request.GetBuffer();
+        var length = checked((int)request.Length);
+        if (length > 0 && buffer[length - 1] == (byte)'\r')
+            length--;
+        return Encoding.UTF8.GetString(buffer, 0, length);
     }
 
     private static void LogServiceError(string message)

@@ -10,6 +10,7 @@ namespace LenovoLoqControl.Services;
 public sealed class ServiceFanController : IFanController
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(5);
     private readonly bool _serviceAvailable;
 
     public ServiceFanController()
@@ -88,12 +89,14 @@ public sealed class ServiceFanController : IFanController
             using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
             writer.WriteLine(JsonSerializer.Serialize(
                 new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-mode"), JsonOptions));
-            var line = reader.ReadLine();
+            using var responseTimeout = new CancellationTokenSource(ResponseTimeout);
+            var line = reader.ReadLineAsync(responseTimeout.Token).AsTask().GetAwaiter().GetResult();
             return !string.IsNullOrWhiteSpace(line)
                 && JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions) is not null;
         }
         catch (Exception ex) when (ex is IOException
                                    or JsonException
+                                   or OperationCanceledException
                                    or System.TimeoutException
                                    or UnauthorizedAccessException)
         {
@@ -110,11 +113,17 @@ public sealed class ServiceFanController : IFanController
             using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
             using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
             await writer.WriteLineAsync(JsonSerializer.Serialize(request, JsonOptions));
-            var line = await reader.ReadLineAsync(cancellationToken);
+            using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            responseTimeout.CancelAfter(ResponseTimeout);
+            var line = await reader.ReadLineAsync(responseTimeout.Token);
             return string.IsNullOrWhiteSpace(line)
                 ? new ServiceResponse(false, "The hardware service returned an empty response.")
                 : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions)
                     ?? new ServiceResponse(false, "The hardware service returned an invalid response.");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new ServiceResponse(false, "The hardware service timed out while returning a response.");
         }
         catch (OperationCanceledException)
         {

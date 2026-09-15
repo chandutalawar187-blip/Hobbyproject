@@ -29,6 +29,24 @@ public class FanCurveValidatorTests
     }
 
     [Fact]
+    public void RejectsNonFiniteValuesAndDuplicateTemperatures()
+    {
+        var curve = new FanCurve(new[]
+        {
+            new FanCurvePoint(65, 50),
+            new FanCurvePoint(45, double.NaN),
+            new FanCurvePoint(double.PositiveInfinity, 100),
+            new FanCurvePoint(65, 60),
+        });
+
+        var errors = FanCurveValidator.Validate(curve);
+
+        Assert.Contains("Temperature points must be finite numbers.", errors);
+        Assert.Contains("Fan output must be a finite number.", errors);
+        Assert.Contains("Temperature points must be strictly increasing.", errors);
+    }
+
+    [Fact]
     public void ClassifiesCriticalTemperature()
     {
         Assert.Equal(ThermalState.Critical, ThermalSafety.Classify(96));

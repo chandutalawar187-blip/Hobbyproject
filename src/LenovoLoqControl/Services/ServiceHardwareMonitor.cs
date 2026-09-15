@@ -15,6 +15,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     private SensorReading? _lastReading;
     private DateTimeOffset _lastReadingAt;
     private static readonly TimeSpan MaxCachedReadingAge = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(5);
     private const long MaxTelemetryLogBytes = 256 * 1024;
 
     public ServiceHardwareMonitor(IHardwareMonitor fallback)
@@ -40,11 +41,17 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
             };
             await writer.WriteLineAsync(JsonSerializer.Serialize(
                 new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-ssd-temperature"), JsonOptions));
-            var line = await reader.ReadLineAsync(cancellationToken);
+            using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            responseTimeout.CancelAfter(ResponseTimeout);
+            var line = await reader.ReadLineAsync(responseTimeout.Token);
             var response = string.IsNullOrWhiteSpace(line)
                 ? null
                 : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions);
             return response?.Success == true ? response.SsdTemperature : null;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
         }
         catch (Exception ex) when (ex is JsonException
                                    or IOException
@@ -74,7 +81,9 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
             };
             await writer.WriteLineAsync(JsonSerializer.Serialize(
                 new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-telemetry"), JsonOptions));
-            var line = await reader.ReadLineAsync(cancellationToken);
+            using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            responseTimeout.CancelAfter(ResponseTimeout);
+            var line = await reader.ReadLineAsync(responseTimeout.Token);
             var response = string.IsNullOrWhiteSpace(line)
                 ? null
                 : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions);
@@ -88,11 +97,15 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
 
             return await ReadFallbackOrCachedAsync(cancellationToken);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is JsonException
+                                   or IOException
+                                   or OperationCanceledException
+                                   or System.TimeoutException
+                                   or UnauthorizedAccessException)
         {
             Log($"fallback {ex.GetType().Name}: {ex.Message}");
             return await ReadFallbackOrCachedAsync(cancellationToken);

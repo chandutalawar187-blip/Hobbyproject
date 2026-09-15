@@ -145,7 +145,7 @@
                Control="Finish"
                Event="DoAction"
                Value="Wix4ShellExec_X64"
-               Condition="WixShellExecTarget AND NOT REMOVE AND NOT PATCH" />
+               Condition="WixShellExecTarget AND WIXUI_EXITDIALOGOPTIONALCHECKBOX AND NOT REMOVE AND NOT PATCH" />
     </UI>
 
   </Package>
