@@ -125,15 +125,44 @@ $serviceFiles = @(Get-ChildItem $servicePublishDir -Recurse -File |
         }
     })
 $serviceDirectoryIds = @{}
+$serviceDirectories = [System.Collections.Generic.HashSet[string]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
 foreach ($entry in $serviceFiles) {
     $directory = [System.IO.Path]::GetDirectoryName($entry.Relative)
-    if ([string]::IsNullOrEmpty($directory) -or $serviceDirectoryIds.ContainsKey($directory)) { continue }
-    $directoryId = "ServicePublishedDirectory" + ($directory -replace '[^A-Za-z0-9]', '')
-    $serviceDirectoryIds[$directory] = $directoryId
+    while (-not [string]::IsNullOrEmpty($directory)) {
+        [void]$serviceDirectories.Add($directory)
+        $directory = [System.IO.Path]::GetDirectoryName($directory)
+    }
+}
+
+$serviceDirectoryIndex = 0
+foreach ($directory in ($serviceDirectories | Sort-Object {
+    ($_ -split '[\\/]')
+} | Sort-Object { ($_ -split '[\\/]').Count }, { $_ })) {
+    $serviceDirectoryIndex++
+    $serviceDirectoryIds[$directory] = "ServicePublishedDirectory$serviceDirectoryIndex"
+}
+
+function Write-ServiceDirectory([string]$relativeDirectory) {
     $serviceWriter.WriteStartElement("Directory")
-    $serviceWriter.WriteAttributeString("Id", $directoryId)
-    $serviceWriter.WriteAttributeString("Name", [System.IO.Path]::GetFileName($directory))
+    $serviceWriter.WriteAttributeString("Id", $serviceDirectoryIds[$relativeDirectory])
+    $serviceWriter.WriteAttributeString("Name", [System.IO.Path]::GetFileName($relativeDirectory))
+
+    $children = @($serviceDirectories | Where-Object {
+        [System.IO.Path]::GetDirectoryName($_) -eq $relativeDirectory
+    } | Sort-Object)
+    foreach ($child in $children) {
+        Write-ServiceDirectory $child
+    }
+
     $serviceWriter.WriteEndElement()
+}
+
+$topLevelDirectories = @($serviceDirectories | Where-Object {
+    [string]::IsNullOrEmpty([System.IO.Path]::GetDirectoryName($_))
+} | Sort-Object)
+foreach ($directory in $topLevelDirectories) {
+    Write-ServiceDirectory $directory
 }
 $serviceWriter.WriteEndElement()
 $serviceWriter.WriteStartElement("ComponentGroup")
