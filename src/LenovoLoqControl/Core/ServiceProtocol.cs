@@ -18,4 +18,5 @@ public sealed record ServiceResponse(
     bool Supported = false,
     FanMode? Mode = null,
     FirmwareFanTable? Table = null,
-    SensorReading? Reading = null);
+    SensorReading? Reading = null,
+    double? SsdTemperature = null);

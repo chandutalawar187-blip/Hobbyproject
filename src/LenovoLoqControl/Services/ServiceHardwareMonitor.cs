@@ -24,6 +24,37 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
 
     public HardwareIdentity Identity { get; }
 
+    public async Task<double?> ReadSsdTemperatureAsync(CancellationToken cancellationToken)
+    {
+        await _readLock.WaitAsync(cancellationToken);
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName,
+                PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(5000, cancellationToken);
+            using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
+            using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true)
+            {
+                AutoFlush = true
+            };
+            await writer.WriteLineAsync(JsonSerializer.Serialize(
+                new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-ssd-temperature"), JsonOptions));
+            var line = await reader.ReadLineAsync(cancellationToken);
+            var response = string.IsNullOrWhiteSpace(line)
+                ? null
+                : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions);
+            return response?.Success == true ? response.SsdTemperature : null;
+        }
+        catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+        finally
+        {
+            _readLock.Release();
+        }
+    }
+
     public async Task<SensorReading> ReadAsync(CancellationToken cancellationToken)
     {
         await _readLock.WaitAsync(cancellationToken);

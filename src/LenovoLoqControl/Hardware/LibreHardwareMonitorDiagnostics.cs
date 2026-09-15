@@ -1,6 +1,9 @@
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
+using System.IO;
+using Microsoft.Win32.SafeHandles;
+using DiskInfoToolkit;
 
 namespace LenovoLoqControl.Hardware;
 
@@ -60,7 +63,20 @@ internal sealed class LibreHardwareMonitorDiagnostics : IDisposable
                 var temperatures = sensors.Where(s => s.SensorType == SensorType.Temperature && s.Value is not null).ToArray();
                 var loads = sensors.Where(s => s.SensorType == SensorType.Load && s.Value is not null).ToArray();
                 var fans = sensors.Where(s => s.SensorType == SensorType.Fan && s.Value is not null).ToArray();
-                var storageTemperatures = temperatures.Where(s => IsStorage(s.Hardware)).ToArray();
+                var storageTemperatures = temperatures
+                    .Where(s => IsStorage(s.Hardware))
+                    .Where(s => s.Value is > 0 and < 150)
+                    .ToArray();
+                var ssdTemperature = storageTemperatures.Length > 0
+                    ? storageTemperatures.Max(s => (double?)s.Value!.Value)
+                    : null;
+                Log($"ssdTemperatureBeforeFallback={ssdTemperature?.ToString() ?? "null"}");
+                if (ssdTemperature is null)
+                    ssdTemperature = ReadDiskInfoToolkitTemperature();
+                Log($"ssdTemperatureAfterFallback={ssdTemperature?.ToString() ?? "null"}");
+                Log($"read sensors={sensors.Count} temperatures={temperatures.Length} storageTemperatures={storageTemperatures.Length}");
+                foreach (var sensor in temperatures)
+                    Log($"temperature hardwareType={sensor.Hardware.HardwareType} hardware={sensor.Hardware.Name} sensor={sensor.Name} value={sensor.Value}");
                 var batterySensors = sensors.Where(s => s.Hardware.HardwareType == HardwareType.Battery
                     && s.Value is not null).ToArray();
 
@@ -71,13 +87,14 @@ internal sealed class LibreHardwareMonitorDiagnostics : IDisposable
                     Find(loads, IsGpu, "Core", "GPU"),
                     Find(fans, HardwareType.Cpu, "CPU"),
                     Find(fans, IsGpu, "GPU"),
-                    storageTemperatures.Select(s => (double?)s.Value!.Value).DefaultIfEmpty().Max(),
+                    ssdTemperature,
                     powerStatus is not null || batterySensors.Length > 0,
                     FormatBattery(batterySensors, powerStatus),
                     sensors.Select(s => $"{s.Hardware.Name}: {s.Name} = {s.Value:0.#}").ToArray());
             }
-            catch
+            catch (Exception ex)
             {
+                Log($"LibreHardwareMonitor read failed: {ex}");
                 return new DiagnosticsHardwareSnapshot(null, null, null, null, null, null, null,
                     powerStatus is not null,
                     FormatBattery([], powerStatus), []);
@@ -107,7 +124,208 @@ internal sealed class LibreHardwareMonitorDiagnostics : IDisposable
     private static bool IsStorage(IHardware hardware) =>
         hardware.HardwareType == HardwareType.Storage
         || hardware.Name.Contains("SSD", StringComparison.OrdinalIgnoreCase)
-        || hardware.Name.Contains("NVMe", StringComparison.OrdinalIgnoreCase);
+        || hardware.Name.Contains("NVMe", StringComparison.OrdinalIgnoreCase)
+        || hardware.Name.Contains("NVM", StringComparison.OrdinalIgnoreCase)
+        || hardware.Name.Contains("SAMSUNG", StringComparison.OrdinalIgnoreCase)
+        || hardware.Name.Contains("MZAL", StringComparison.OrdinalIgnoreCase)
+        || hardware.Name.Contains("MZVL", StringComparison.OrdinalIgnoreCase);
+
+    private static double? ReadNvmeSmartTemperature()
+    {
+        for (var diskNumber = 0; diskNumber < 32; diskNumber++)
+        {
+            using var handle = CreateFile(
+                $@"\\.\PhysicalDrive{diskNumber}",
+                0,
+                FileShare.ReadWrite,
+                IntPtr.Zero,
+                FileMode.Open,
+                0,
+                IntPtr.Zero);
+            if (handle.IsInvalid)
+                continue;
+
+            var query = new StoragePropertyQuery
+            {
+                PropertyId = StoragePropertyId.StorageDeviceProtocolSpecificProperty,
+                QueryType = StorageQueryType.StandardQuery,
+                Protocol = new StorageProtocolSpecificData
+                {
+                    ProtocolType = StorageProtocolType.Nvme,
+                    DataType = StorageProtocolDataType.LogPage,
+                    RequestValue = 0x02,
+                    RequestSubValue = 0,
+                    DataOffset = (uint)(Marshal.SizeOf<StorageProtocolDataDescriptor>()
+                        + Marshal.SizeOf<StorageProtocolSpecificData>()),
+                    DataLength = 512
+                }
+            };
+            var buffer = new byte[4096];
+            var querySize = Marshal.SizeOf<StoragePropertyQuery>();
+            var queryHandle = GCHandle.Alloc(query, GCHandleType.Pinned);
+            try
+            {
+                Marshal.Copy(queryHandle.AddrOfPinnedObject(), buffer, 0, querySize);
+            }
+            finally
+            {
+                queryHandle.Free();
+            }
+
+            if (!DeviceIoControl(
+                    handle,
+                    IoctlStorageQueryProperty,
+                    buffer,
+                    buffer.Length,
+                    buffer,
+                    buffer.Length,
+                    out var returned,
+                    IntPtr.Zero)
+                || returned < query.Protocol.DataOffset + 2)
+                continue;
+
+            var temperatureKelvin = BitConverter.ToUInt16(buffer, (int)query.Protocol.DataOffset);
+            var temperatureCelsius = temperatureKelvin - 273.15;
+            if (temperatureCelsius is > 0 and < 150)
+            {
+                Log($"NVMe SMART temperature physicalDrive={diskNumber} value={temperatureCelsius:0.#}");
+                return temperatureCelsius;
+            }
+        }
+
+        Log("NVMe SMART temperature unavailable.");
+        return null;
+    }
+
+    private static double? ReadDiskInfoToolkitTemperature()
+    {
+        try
+        {
+            double? temperature = null;
+            StorageManager.ReloadStorages();
+            Log($"DiskInfoToolkit storageCount={StorageManager.Storages.Count}");
+            foreach (var disk in StorageManager.Storages)
+            {
+                disk.Update();
+                var diskTemperature = disk.Smart?.Temperature;
+                Log($"DiskInfoToolkit disk={disk.Model} bus={disk.BusType} nvme={disk.IsNVMe} temperature={diskTemperature}");
+                if (diskTemperature is > 0 and < 150)
+                    temperature = temperature is double current
+                        ? Math.Max(current, diskTemperature.Value)
+                        : diskTemperature.Value;
+
+                foreach (var attribute in disk.Smart?.SmartAttributes ?? [])
+                    Log($"DiskInfoToolkit smart disk={disk.Model} id={attribute.Info.ID} name={attribute.Info.Name} value={attribute.Attribute}");
+            }
+
+            return temperature;
+        }
+        catch (Exception ex)
+        {
+            Log($"DiskInfoToolkit read failed: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StoragePropertyQuery
+    {
+        public StoragePropertyId PropertyId;
+        public StorageQueryType QueryType;
+        public StorageProtocolSpecificData Protocol;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StorageProtocolSpecificData
+    {
+        public StorageProtocolType ProtocolType;
+        public StorageProtocolDataType DataType;
+        public uint RequestValue;
+        public uint RequestSubValue;
+        public uint ProtocolDataOffset;
+        public uint ProtocolDataLength;
+
+        public uint DataOffset
+        {
+            readonly get => ProtocolDataOffset;
+            set => ProtocolDataOffset = value;
+        }
+
+        public uint DataLength
+        {
+            readonly get => ProtocolDataLength;
+            set => ProtocolDataLength = value;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StorageProtocolDataDescriptor
+    {
+        public uint Version;
+        public uint Size;
+        public StorageProtocolSpecificData Protocol;
+    }
+
+    private enum StoragePropertyId : uint
+    {
+        StorageDeviceProtocolSpecificProperty = 50
+    }
+
+    private enum StorageQueryType : uint
+    {
+        StandardQuery = 0
+    }
+
+    private enum StorageProtocolType : uint
+    {
+        Nvme = 3
+    }
+
+    private enum StorageProtocolDataType : uint
+    {
+        LogPage = 2
+    }
+
+    private const uint IoctlStorageQueryProperty = 0x002D1400;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFile(
+        string fileName,
+        uint desiredAccess,
+        FileShare shareMode,
+        IntPtr securityAttributes,
+        FileMode creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeviceIoControl(
+        SafeFileHandle device,
+        uint controlCode,
+        byte[] inputBuffer,
+        int inputBufferSize,
+        byte[] outputBuffer,
+        int outputBufferSize,
+        out int bytesReturned,
+        IntPtr overlapped);
+
+    private static void Log(string message)
+    {
+        try
+        {
+            var directory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LOQ Control", "Logs");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(
+                Path.Combine(directory, "diagnostics-hardware.log"),
+                $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+        }
+    }
 
     private static string FormatBattery(IEnumerable<ISensor> sensors, BatteryPowerStatus? powerStatus)
     {
