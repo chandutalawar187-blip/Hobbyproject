@@ -120,6 +120,10 @@ public sealed class ServiceFanController : IFanController
         {
             throw;
         }
+        catch (JsonException)
+        {
+            return new ServiceResponse(false, "The hardware service returned an invalid response.");
+        }
         catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
         {
             return new ServiceResponse(false, $"The hardware service is unavailable: {ex.Message}");
