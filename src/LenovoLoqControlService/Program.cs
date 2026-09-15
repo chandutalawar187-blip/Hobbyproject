@@ -119,32 +119,37 @@ internal sealed class LoqHardwareService : ServiceBase
     }
 
     private async Task RunPipeServerAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            NamedPipeServerStream server;
+            try
+            {
+                server = CreatePipe();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException
+                                       or UnauthorizedAccessException
+                                       or Win32Exception
+                                       or COMException
+                                       or IdentityNotMappedException)
+            {
+                LogServiceError($"Pipe creation failed: {ex}");
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                continue;
+            }
+
+            await using (server)
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    NamedPipeServerStream server;
-                    try
-                    {
-                        server = CreatePipe();
-                    }
-                    catch (Exception ex) when (ex is InvalidOperationException
-                                               or UnauthorizedAccessException
-                                               or Win32Exception
-                                               or COMException
-                                               or IdentityNotMappedException)
-                    {
-                        LogServiceError($"Pipe creation failed: {ex}");
-                        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                        continue;
-                    }
-
-                    await using (server)
-                    {
                     try
                     {
                         await server.WaitForConnectionAsync(cancellationToken);
                         using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
-                        await using var writer = new StreamWriter(server, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
+                        await using var writer = new StreamWriter(server, new UTF8Encoding(false), leaveOpen: true)
+                        {
+                            AutoFlush = true
+                        };
                         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                         requestTimeout.CancelAfter(TimeSpan.FromSeconds(5));
                         var line = await reader.ReadLineAsync(requestTimeout.Token);
@@ -169,12 +174,13 @@ internal sealed class LoqHardwareService : ServiceBase
                             LogServiceError($"Service command failed: {ex}");
                             response = new ServiceResponse(false, $"Hardware operation failed: {ex.Message}");
                         }
+
                         await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
                         server.WaitForPipeDrain();
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
-                        break;
+                        return;
                     }
                     catch (OperationCanceledException)
                     {
@@ -188,8 +194,14 @@ internal sealed class LoqHardwareService : ServiceBase
                     {
                         LogServiceError($"Pipe loop failed: {ex}");
                     }
+                    finally
+                    {
+                        if (server.IsConnected)
+                            server.Disconnect();
                     }
                 }
+            }
+        }
     }
 
     private static void LogServiceError(string message)
@@ -425,7 +437,7 @@ internal sealed class LoqHardwareService : ServiceBase
                     PipeDirection.InOut,
                     1,
                     PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous,
+                    PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance,
                     4096,
                     4096,
                     security);
