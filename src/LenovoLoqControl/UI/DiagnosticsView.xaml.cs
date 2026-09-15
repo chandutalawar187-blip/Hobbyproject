@@ -403,7 +403,7 @@ public partial class DiagnosticsView : UserControl
                 System.IO.Path.Combine(directory, "diagnostics-hardware.log"),
                 $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
     }
