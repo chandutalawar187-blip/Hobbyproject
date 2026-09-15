@@ -322,22 +322,23 @@ internal sealed class LoqHardwareService : ServiceBase
             if (handle.IsInvalid)
                 continue;
 
-            var query = new byte[32];
+            var query = new byte[48];
             BitConverter.GetBytes(50u).CopyTo(query, 0);
             BitConverter.GetBytes(0u).CopyTo(query, 4);
             BitConverter.GetBytes(3u).CopyTo(query, 8);
             BitConverter.GetBytes(2u).CopyTo(query, 12);
-            BitConverter.GetBytes(0u).CopyTo(query, 16);
-            BitConverter.GetBytes(40u).CopyTo(query, 20);
-            BitConverter.GetBytes(512u).CopyTo(query, 24);
+            BitConverter.GetBytes(2u).CopyTo(query, 16);
+            BitConverter.GetBytes(0u).CopyTo(query, 20);
+            BitConverter.GetBytes(40u).CopyTo(query, 24);
+            BitConverter.GetBytes(512u).CopyTo(query, 28);
 
             var output = new byte[4096];
             if (!DeviceIoControl(handle, 0x002D1400, query, query.Length,
                     output, output.Length, out var returned, IntPtr.Zero)
-                || returned < 42)
+                || returned < 51)
                 continue;
 
-            var kelvin = BitConverter.ToUInt16(output, 40);
+            var kelvin = BitConverter.ToUInt16(output, 49);
             var celsius = kelvin - 273.15;
             if (celsius is > 0 and < 150)
                 return celsius;
