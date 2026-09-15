@@ -6,7 +6,7 @@ $servicePublishDir = Join-Path $root "artifacts\LoqControlService"
 $serviceBuildDir = Join-Path $root "artifacts\service-build"
 $appBuildDir = Join-Path $root "artifacts\app-build"
 $outputDir = Join-Path $root "artifacts\release"
-$releaseVersion = "1.2.5"
+$releaseVersion = "1.2.6"
 $generatedWxs = Join-Path $outputDir "PublishedFiles.generated.wxs"
 $generatedServiceWxs = Join-Path $outputDir "HardwareServiceFiles.generated.wxs"
 
