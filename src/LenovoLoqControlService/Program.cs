@@ -124,7 +124,11 @@ internal sealed class LoqHardwareService : ServiceBase
                     {
                         server = CreatePipe();
                     }
-                    catch (InvalidOperationException)
+                    catch (Exception ex) when (ex is InvalidOperationException
+                                               or UnauthorizedAccessException
+                                               or System.Management.ManagementException
+                                               or COMException
+                                               or IdentityNotMappedException)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                         continue;
@@ -269,7 +273,9 @@ internal sealed class LoqHardwareService : ServiceBase
         catch (Exception ex) when (ex is InvalidOperationException
                                    or IOException
                                    or IdentityNotMappedException
-                                   or ManagementException)
+                                   or ManagementException
+                                   or COMException
+                                   or UnauthorizedAccessException)
         {
             return false;
         }
@@ -278,10 +284,9 @@ internal sealed class LoqHardwareService : ServiceBase
     private static NamedPipeServerStream CreatePipe()
             {
                 var security = new PipeSecurity();
-                var activeUserSid = GetActiveUserSid()
-                    ?? throw new InvalidOperationException("No active interactive user was found.");
+                var users = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
                 security.AddAccessRule(new PipeAccessRule(
-                    activeUserSid, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+                    users, PipeAccessRights.ReadWrite, AccessControlType.Allow));
                 security.AddAccessRule(new PipeAccessRule(
                     new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
                     PipeAccessRights.FullControl, AccessControlType.Allow));
