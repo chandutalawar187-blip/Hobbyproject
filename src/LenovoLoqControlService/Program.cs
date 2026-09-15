@@ -5,6 +5,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Runtime.InteropServices;
+using System.Management;
 using LenovoLoqControl.Core;
 using LenovoLoqControl.Hardware;
 
@@ -118,7 +119,19 @@ internal sealed class LoqHardwareService : ServiceBase
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await using var server = CreatePipe();
+                    NamedPipeServerStream server;
+                    try
+                    {
+                        server = CreatePipe();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                        continue;
+                    }
+
+                    await using (server)
+                    {
                     try
                     {
                         await server.WaitForConnectionAsync(cancellationToken);
@@ -155,6 +168,7 @@ internal sealed class LoqHardwareService : ServiceBase
                     catch (IOException)
                     {
                         // A disconnected client must not stop the service.
+                    }
                     }
                 }
     }
@@ -242,22 +256,35 @@ internal sealed class LoqHardwareService : ServiceBase
     {
         try
         {
-            var userName = server.GetImpersonationUserName();
-            return !userName.Equals("ANONYMOUS LOGON", StringComparison.OrdinalIgnoreCase);
+            var clientName = server.GetImpersonationUserName();
+            if (clientName.Equals("ANONYMOUS LOGON", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var clientSid = new NTAccount(clientName)
+                .Translate(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            var activeUserSid = GetActiveUserSid();
+            return clientSid is not null && activeUserSid is not null &&
+                clientSid.Equals(activeUserSid);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        catch (Exception ex) when (ex is InvalidOperationException
+                                   or IOException
+                                   or IdentityNotMappedException
+                                   or ManagementException)
         {
-            // The pipe ACL already limits access to authenticated local users.
-            // Some client tokens do not expose an impersonation name at this level.
-            return true;
+            return false;
         }
     }
 
     private static NamedPipeServerStream CreatePipe()
             {
                 var security = new PipeSecurity();
-                var users = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
-                security.AddAccessRule(new PipeAccessRule(users, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+                var activeUserSid = GetActiveUserSid()
+                    ?? throw new InvalidOperationException("No active interactive user was found.");
+                security.AddAccessRule(new PipeAccessRule(
+                    activeUserSid, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+                security.AddAccessRule(new PipeAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+                    PipeAccessRights.FullControl, AccessControlType.Allow));
                 return NamedPipeServerStreamAcl.Create(
                     ServiceProtocol.PipeName,
                     PipeDirection.InOut,
@@ -267,5 +294,17 @@ internal sealed class LoqHardwareService : ServiceBase
                     4096,
                     4096,
                     security);
+    }
+
+    private static SecurityIdentifier? GetActiveUserSid()
+    {
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT UserName FROM Win32_ComputerSystem");
+        using var rows = searcher.Get();
+        using var row = rows.Cast<ManagementObject>().FirstOrDefault();
+        var userName = row?["UserName"] as string;
+        return string.IsNullOrWhiteSpace(userName)
+            ? null
+            : new NTAccount(userName).Translate(typeof(SecurityIdentifier)) as SecurityIdentifier;
     }
     }
