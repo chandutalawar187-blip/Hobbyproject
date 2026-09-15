@@ -170,6 +170,7 @@ internal sealed class LoqHardwareService : ServiceBase
                             response = new ServiceResponse(false, $"Hardware operation failed: {ex.Message}");
                         }
                         await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
+                        server.WaitForPipeDrain();
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
