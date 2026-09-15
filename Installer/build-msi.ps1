@@ -90,11 +90,14 @@ wix build (Join-Path $PSScriptRoot "LoqControl.wxs") `
     $generatedWxs `
     -arch x64 `
     -d PublishDir=$publishDir `
-    -o (Join-Path $outputDir "LOQ-Control-1.2.0-x64.msi")
+    -d SourceDir=$PSScriptRoot `
+    -ext WixToolset.UI.wixext `
+    -ext WixToolset.Util.wixext `
+    -o (Join-Path $outputDir "LOQ-Control-1.2.1-x64.msi")
 
 if ($LASTEXITCODE -ne 0) {
     throw "WiX failed with exit code $LASTEXITCODE."
 }
 
 Remove-Item $generatedWxs -Force
-Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.2.0-x64.msi')"
+Write-Host "Created $(Join-Path $outputDir 'LOQ-Control-1.2.1-x64.msi')"
