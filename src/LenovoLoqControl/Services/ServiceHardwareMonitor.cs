@@ -13,6 +13,8 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     private readonly IHardwareMonitor _fallback;
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private SensorReading? _lastReading;
+    private DateTimeOffset _lastReadingAt;
+    private static readonly TimeSpan MaxCachedReadingAge = TimeSpan.FromSeconds(3);
 
     public ServiceHardwareMonitor(IHardwareMonitor fallback)
     {
@@ -21,6 +23,37 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     }
 
     public HardwareIdentity Identity { get; }
+
+    public async Task<double?> ReadSsdTemperatureAsync(CancellationToken cancellationToken)
+    {
+        await _readLock.WaitAsync(cancellationToken);
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName,
+                PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(5000, cancellationToken);
+            using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
+            using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true)
+            {
+                AutoFlush = true
+            };
+            await writer.WriteLineAsync(JsonSerializer.Serialize(
+                new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-ssd-temperature"), JsonOptions));
+            var line = await reader.ReadLineAsync(cancellationToken);
+            var response = string.IsNullOrWhiteSpace(line)
+                ? null
+                : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions);
+            return response?.Success == true ? response.SsdTemperature : null;
+        }
+        catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+        finally
+        {
+            _readLock.Release();
+        }
+    }
 
     public async Task<SensorReading> ReadAsync(CancellationToken cancellationToken)
     {
@@ -45,10 +78,11 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
             if (response?.Success == true && response.Reading is not null)
             {
                 _lastReading = response.Reading;
+                _lastReadingAt = DateTimeOffset.UtcNow;
                 return response.Reading;
             }
 
-            return _lastReading ?? await _fallback.ReadAsync(cancellationToken);
+            return await ReadFallbackOrCachedAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -57,11 +91,26 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
         catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
         {
             Log($"fallback {ex.GetType().Name}: {ex.Message}");
-            return _lastReading ?? await _fallback.ReadAsync(cancellationToken);
+            return await ReadFallbackOrCachedAsync(cancellationToken);
         }
+
         finally
         {
             _readLock.Release();
+        }
+    }
+
+    private async Task<SensorReading> ReadFallbackOrCachedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _fallback.ReadAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException &&
+                                   _lastReading is not null &&
+                                   DateTimeOffset.UtcNow - _lastReadingAt <= MaxCachedReadingAge)
+        {
+            return _lastReading;
         }
     }
 
