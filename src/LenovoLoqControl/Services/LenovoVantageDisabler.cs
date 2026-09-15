@@ -200,18 +200,11 @@ public sealed class LenovoVantageDisabler
 
     private static void RunElevatedIntegrationCommand(bool enabled)
     {
-        var taskPaths = string.Join(",", TaskPaths.Select(path => $"'{path}'"));
         var serviceNames = string.Join(",", ServiceNames.Select(name => $"'{name}'"));
         var serviceCommand = enabled
             ? "Set-Service -Name $name -StartupType Automatic -ErrorAction Stop; Start-Service -Name $name -ErrorAction Stop"
             : "Stop-Service -Name $name -Force -ErrorAction SilentlyContinue; Set-Service -Name $name -StartupType Disabled -ErrorAction Stop";
-        var taskCommand = enabled
-            ? "Enable-ScheduledTask -InputObject $_ -ErrorAction SilentlyContinue | Out-Null"
-            : "Disable-ScheduledTask -InputObject $_ -ErrorAction SilentlyContinue | Out-Null";
-        var script = "$paths=@(" + taskPaths + "); " +
-                     "foreach($path in $paths) { " +
-                     $"Get-ScheduledTask -TaskPath $path -ErrorAction SilentlyContinue | ForEach-Object {{ {taskCommand} }} " +
-                     "}; " +
+        var script = "$ErrorActionPreference='Stop'; " +
                      $"foreach($name in @({serviceNames})) {{ if(Get-Service -Name $name -ErrorAction SilentlyContinue) {{ {serviceCommand} }} }}";
 
         var startInfo = new ProcessStartInfo
@@ -237,6 +230,8 @@ public sealed class LenovoVantageDisabler
         if (process.ExitCode != 0)
             throw new InvalidOperationException(
                 $"Lenovo integration service operation failed with exit code {process.ExitCode}.");
+
+        TrySetScheduledTasksEnabled(enabled);
     }
 
     private static void RunServiceCommand(string command, string serviceName, string? extra = null,
