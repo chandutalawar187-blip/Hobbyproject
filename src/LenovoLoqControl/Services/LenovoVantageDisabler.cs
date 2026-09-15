@@ -30,10 +30,7 @@ public sealed class LenovoVantageDisabler
     public Task<LenovoVantageStatus> DisableAsync(CancellationToken cancellationToken) =>
         Task.Run(() =>
         {
-            TrySetScheduledTasksEnabled(false);
-            foreach (var serviceName in ServiceNames)
-                SetServiceEnabled(serviceName, false);
-            KillProcesses();
+            RunElevatedIntegrationCommand(false);
             KillProcesses();
             return GetStatus();
         }, cancellationToken);
@@ -41,9 +38,7 @@ public sealed class LenovoVantageDisabler
     public Task<LenovoVantageStatus> EnableAsync(CancellationToken cancellationToken) =>
         Task.Run(() =>
         {
-            TrySetScheduledTasksEnabled(true);
-            foreach (var serviceName in ServiceNames)
-                SetServiceEnabled(serviceName, true);
+            RunElevatedIntegrationCommand(true);
             return GetStatus();
         }, cancellationToken);
 
@@ -200,6 +195,47 @@ public sealed class LenovoVantageDisabler
         {
             // Scheduled-task folders are optional; service control remains authoritative.
         }
+    }
+
+    private static void RunElevatedIntegrationCommand(bool enabled)
+    {
+        var taskPaths = string.Join(",", TaskPaths.Select(path => $"'{path}'"));
+        var serviceNames = string.Join(",", ServiceNames.Select(name => $"'{name}'"));
+        var serviceCommand = enabled
+            ? "Set-Service -Name $name -StartupType Automatic -ErrorAction Stop; Start-Service -Name $name -ErrorAction Stop"
+            : "Stop-Service -Name $name -Force -ErrorAction SilentlyContinue; Set-Service -Name $name -StartupType Disabled -ErrorAction Stop";
+        var taskCommand = enabled
+            ? "Enable-ScheduledTask -InputObject $_ -ErrorAction SilentlyContinue | Out-Null"
+            : "Disable-ScheduledTask -InputObject $_ -ErrorAction SilentlyContinue | Out-Null";
+        var script = "$paths=@(" + taskPaths + "); " +
+                     "foreach($path in $paths) { " +
+                     $"Get-ScheduledTask -TaskPath $path -ErrorAction SilentlyContinue | ForEach-Object {{ {taskCommand} }} " +
+                     "}; " +
+                     $"foreach($name in @({serviceNames})) {{ if(Get-Service -Name $name -ErrorAction SilentlyContinue) {{ {serviceCommand} }} }}";
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = TrustedWindowsExecutables.PowerShell,
+            WorkingDirectory = Environment.SystemDirectory,
+            UseShellExecute = true,
+            Verb = "runas",
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-NonInteractive");
+        startInfo.ArgumentList.Add("-Command");
+        startInfo.ArgumentList.Add(script);
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Unable to request administrator access for Lenovo integration.");
+        if (!process.WaitForExit(15000))
+        {
+            process.Kill();
+            throw new System.TimeoutException("Lenovo integration service operation timed out.");
+        }
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"Lenovo integration service operation failed with exit code {process.ExitCode}.");
     }
 
     private static void RunServiceCommand(string command, string serviceName, string? extra = null,
