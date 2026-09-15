@@ -45,7 +45,10 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
                 : JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions);
             return response?.Success == true ? response.SsdTemperature : null;
         }
-        catch (Exception ex) when (ex is IOException or System.TimeoutException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is JsonException
+                                   or IOException
+                                   or System.TimeoutException
+                                   or UnauthorizedAccessException)
         {
             return null;
         }
