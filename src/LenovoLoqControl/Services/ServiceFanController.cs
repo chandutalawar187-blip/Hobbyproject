@@ -14,7 +14,7 @@ public sealed class ServiceFanController : IFanController
 
     public ServiceFanController()
     {
-        _serviceAvailable = IsServiceRunning();
+        _serviceAvailable = IsServiceRunning() && ProbeService();
         AvailabilityMessage = _serviceAvailable
             ? "Verified Lenovo hardware control is provided by the elevated LOQ Control service."
             : "The elevated LOQ Control service is unavailable. Fan control is disabled until it is installed and running.";
@@ -73,6 +73,29 @@ public sealed class ServiceFanController : IFanController
             return service.Status == ServiceControllerStatus.Running;
         }
         catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ProbeService()
+    {
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName, PipeDirection.InOut);
+            pipe.Connect(1500);
+            using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
+            using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
+            writer.WriteLine(JsonSerializer.Serialize(
+                new ServiceRequest(ServiceProtocol.ProtocolVersion, "get-mode"), JsonOptions));
+            var line = reader.ReadLine();
+            return !string.IsNullOrWhiteSpace(line)
+                && JsonSerializer.Deserialize<ServiceResponse>(line, JsonOptions) is not null;
+        }
+        catch (Exception ex) when (ex is IOException
+                                   or JsonException
+                                   or System.TimeoutException
+                                   or UnauthorizedAccessException)
         {
             return false;
         }
