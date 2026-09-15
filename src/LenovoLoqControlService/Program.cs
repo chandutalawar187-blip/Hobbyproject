@@ -176,7 +176,7 @@ internal sealed class LoqHardwareService : ServiceBase
                         }
 
                         await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
-                        server.WaitForPipeDrain();
+                        await DrainPipeAsync(server, cancellationToken);
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
@@ -216,9 +216,36 @@ internal sealed class LoqHardwareService : ServiceBase
                 Path.Combine(directory, "hardware-service.log"),
                 $"{DateTimeOffset.Now:u} {message}{Environment.NewLine}");
         }
+
         catch (IOException)
         {
         }
+    }
+
+    private static async Task DrainPipeAsync(
+        NamedPipeServerStream server,
+        CancellationToken cancellationToken)
+    {
+        var drainTask = Task.Run(server.WaitForPipeDrain, CancellationToken.None);
+        _ = drainTask.ContinueWith(
+            task => _ = task.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
+        var completedTask = await Task.WhenAny(
+            drainTask,
+            Task.Delay(TimeSpan.FromSeconds(2), cancellationToken));
+
+        if (completedTask != drainTask)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                cancellationToken.ThrowIfCancellationRequested();
+
+            LogServiceError("Timed out while draining a named-pipe response; disconnecting client.");
+            return;
+        }
+
+        await drainTask;
     }
 
     private async Task<ServiceResponse> HandleRequestAsync(string? line, CancellationToken cancellationToken)
