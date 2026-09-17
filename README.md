@@ -7,27 +7,21 @@ A native Windows desktop control center foundation for Lenovo LOQ laptops. Each 
 The current WPF interface uses a dark, compact layout for live telemetry, fan
 control, diagnostics, settings, and Lenovo integration management.
 
-| Dashboard | Fan control |
+| Performance Modes | Fan control |
 | --- | --- |
-| ![LOQ Control dashboard](.assets/Screenshot%202026-09-17%20175021.png) | ![LOQ Control fan control](.assets/Screenshot%202026-09-17%20175034.png) |
+| ![LOQ Control dashboard](.assets/Screenshot%202026-09-17%20175021.png) | ![LOQ Control fan control](.assets/Screenshot%202026-09-17%20180750.png) |
 
-| Monitoring and diagnostics | Settings and integration controls |
+| Dashboard | Integration info |
 | --- | --- |
 | ![LOQ Control monitoring view](.assets/Screenshot%202026-09-17%20175048.png) | ![LOQ Control settings](.assets/Screenshot%202026-09-17%20175054.png) |
 
-| Hardware diagnostics | Profile and performance controls |
+| Keyboard Lighting | Profile and performance controls |
 | --- | --- |
 | ![LOQ Control hardware diagnostics](.assets/Screenshot%202026-09-17%20175106.png) | ![LOQ Control performance profile](.assets/Screenshot%202026-09-17%20175114.png) |
 
-| Additional application view | Lenovo integration status |
+| Additional application view | Diagnostics Reports |
 | --- | --- |
 | ![LOQ Control application view](.assets/Screenshot%202026-09-17%20175120.png) | ![LOQ Control Lenovo integration](.assets/Screenshot%202026-09-17%20175135.png) |
-
-![LOQ Control UI overview](.assets/ui.png)
-
-![LOQ Control earlier dashboard capture](.assets/Screenshot%202026-09-12%20214637.png)
-
-![LOQ Control earlier fan-control capture](.assets/Screenshot%202026-09-12%20214744.png)
 
 ## Build
 
