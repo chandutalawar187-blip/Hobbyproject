@@ -2,6 +2,33 @@
 
 A native Windows desktop control center foundation for Lenovo LOQ laptops. Each capability is reported independently: Windows telemetry can work even when thermal sensors are missing, and a Lenovo performance-mode request can be available even when fan RPM or manual curves are not. The app does not write EC registers, ACPI addresses, kernel memory, BIOS settings, or undocumented vendor commands.
 
+## Screenshots
+
+The current WPF interface uses a dark, compact layout for live telemetry, fan
+control, diagnostics, settings, and Lenovo integration management.
+
+| Dashboard | Fan control |
+| --- | --- |
+| ![LOQ Control dashboard](.assets/Screenshot%202026-09-17%20175021.png) | ![LOQ Control fan control](.assets/Screenshot%202026-09-17%20175034.png) |
+
+| Monitoring and diagnostics | Settings and integration controls |
+| --- | --- |
+| ![LOQ Control monitoring view](.assets/Screenshot%202026-09-17%20175048.png) | ![LOQ Control settings](.assets/Screenshot%202026-09-17%20175054.png) |
+
+| Hardware diagnostics | Profile and performance controls |
+| --- | --- |
+| ![LOQ Control hardware diagnostics](.assets/Screenshot%202026-09-17%20175106.png) | ![LOQ Control performance profile](.assets/Screenshot%202026-09-17%20175114.png) |
+
+| Additional application view | Lenovo integration status |
+| --- | --- |
+| ![LOQ Control application view](.assets/Screenshot%202026-09-17%20175120.png) | ![LOQ Control Lenovo integration](.assets/Screenshot%202026-09-17%20175135.png) |
+
+![LOQ Control UI overview](.assets/ui.png)
+
+![LOQ Control earlier dashboard capture](.assets/Screenshot%202026-09-12%20214637.png)
+
+![LOQ Control earlier fan-control capture](.assets/Screenshot%202026-09-12%20214744.png)
+
 ## Build
 
 Requirements: Windows 10/11 x64 and the .NET 8 SDK.
@@ -83,6 +110,8 @@ major upgrade, the updater handoff performs the single relaunch after
 * **NVIDIA GPU overclock:** when NVIDIA NVAPI detects a compatible discrete GPU, Custom mode exposes bounded offsets of up to +150 MHz core and +200 MHz VRAM. The default values match the requested 3.00→3.15 GHz and 8.00→8.20 GHz targets as offsets, but the actual live clock remains workload/boost controlled. The control requires AC power and provides an explicit reset.
 * **Keyboard lighting:** white-backlit keyboards expose Off / Low / High on Fan Control through the verified Lenovo lighting WMI path. Verified 4-zone RGB keyboards expose effect controls backed by a capability-gated HID write path; 24-zone and unknown layouts are detected but remain read-only until verified. The application reports command failures explicitly and does not claim physical RGB success without a device response.
 * **Diagnostics:** identity checks are shown for Lenovo and LOQ; unsupported sensor/control capabilities are reported as unavailable. The export button is not wired yet.
+
+![Fan control summary](.assets/control.png)
 
 For example, a system with EnergyDrv should show “Preset modes available” and enable three mode buttons while still showing fan RPM as **Unavailable**. A system without the Lenovo driver should show “Monitoring only” for the performance-mode capability; Windows telemetry can still appear. Neither state requires administrator elevation.
 
