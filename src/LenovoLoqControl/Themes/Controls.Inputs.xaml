@@ -155,7 +155,8 @@
 
       <Grid Grid.Row="1"
             MinWidth="120"
-            VerticalAlignment="Center">
+            VerticalAlignment="Center"
+            Margin="13,0">
         <Grid VerticalAlignment="Center">
           <!-- Inactive track -->
           <Border Height="8"
