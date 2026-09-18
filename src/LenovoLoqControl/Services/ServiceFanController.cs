@@ -15,12 +15,14 @@ public sealed class ServiceFanController : IFanController
 
     public ServiceFanController()
     {
-        _serviceAvailable = IsServiceRunning() && ProbeService();
+        ServiceRunning = IsServiceRunning();
+        _serviceAvailable = ServiceRunning && ProbeService();
         AvailabilityMessage = _serviceAvailable
             ? "Verified Lenovo hardware control is provided by the elevated LOQ Control service."
             : "The elevated LOQ Control service is unavailable. Fan control is disabled until it is installed and running.";
     }
 
+    public bool ServiceRunning { get; }
     public bool IsSupported => _serviceAvailable;
     public string AvailabilityMessage { get; }
 

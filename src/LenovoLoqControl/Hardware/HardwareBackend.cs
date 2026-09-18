@@ -18,7 +18,7 @@ public sealed class HardwareBackend : IHardwareBackend
             ? nvidia.ReadCurrentGraphicsClockGhz
             : null);
         var serviceFan = useElevatedService ? new ServiceFanController() : null;
-        Monitor = serviceFan?.IsSupported == true
+        Monitor = serviceFan?.ServiceRunning == true
             ? new ServiceHardwareMonitor(localMonitor)
             : localMonitor;
         if (serviceFan?.IsSupported == true)
