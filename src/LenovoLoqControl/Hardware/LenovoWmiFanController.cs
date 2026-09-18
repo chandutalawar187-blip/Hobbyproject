@@ -22,20 +22,33 @@ public sealed class LenovoWmiFanController : IFanController
     public bool IsSupported => _isSupported;
     public string AvailabilityMessage { get; }
 
-    public Task<FanMode?> GetCurrentModeAsync(CancellationToken cancellationToken)
+    public async Task<FanMode?> GetCurrentModeAsync(CancellationToken cancellationToken)
     {
         if (!_isSupported)
-            return Task.FromResult<FanMode?>(null);
+            return null;
 
-        return Task.Run<FanMode?>(() => _operations.GetSmartFanMode() switch
+        await _commandLock.WaitAsync(cancellationToken);
+        try
         {
-            1 => FanMode.Quiet,
-            2 => FanMode.Auto,
-            3 => FanMode.Performance,
-            224 => FanMode.MaxCooling,
-            255 => FanMode.Custom,
-            _ => null
-        }, cancellationToken);
+            return await Task.Run<FanMode?>(() => _operations.GetSmartFanMode() switch
+            {
+                1 => FanMode.Quiet,
+                2 => FanMode.Auto,
+                3 => FanMode.Performance,
+                224 => FanMode.MaxCooling,
+                255 => FanMode.Custom,
+                _ => null
+            }, cancellationToken);
+        }
+        catch (Exception ex) when (ex is ManagementException or InvalidOperationException
+            or COMException or TimeoutException)
+        {
+            return null;
+        }
+        finally
+        {
+            _commandLock.Release();
+        }
     }
 
     public async Task<FirmwareFanTable?> ReadCustomFanTableAsync(CancellationToken cancellationToken)

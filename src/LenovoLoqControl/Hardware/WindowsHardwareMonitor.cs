@@ -131,18 +131,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
 
             try
             {
-                using var gpu = new ManagementObjectSearcher(
-                    "SELECT UtilizationPercentage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
-                using var rows = gpu.Get();
-                var values = rows.Cast<ManagementObject>()
-                    .Select(row =>
-                    {
-                        using (row)
-                            return row["UtilizationPercentage"] is null ? 0d : Convert.ToDouble(row["UtilizationPercentage"]);
-                    })
-                    .Where(value => value >= 0)
-                    .ToArray();
-                gpuUsage = values.Length == 0 ? null : Math.Clamp(values.Max(), 0, 100);
+                gpuUsage = ReadDiscreteGpuUsage();
             }
             catch (ManagementException) { }
             catch (UnauthorizedAccessException) { }
@@ -198,6 +187,85 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             return new SensorReading(cpuTemperature, gpuTemperature, cpuUsage, gpuUsage, cpuClock, gpuClock,
                 cpuFanRpm, gpuFanRpm,
                 memoryUsage, battery, charging, DateTimeOffset.Now);
+    }
+
+    private static double? ReadDiscreteGpuUsage()
+    {
+        var dedicatedAdapters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var adapterQuery = new ManagementObjectSearcher(
+                   "SELECT Name, DedicatedUsage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
+        using (var adapterRows = adapterQuery.Get())
+        {
+            foreach (ManagementObject row in adapterRows)
+            {
+                using (row)
+                {
+                    var name = Convert.ToString(row["Name"]);
+                    if (string.IsNullOrWhiteSpace(name) ||
+                        !double.TryParse(Convert.ToString(row["DedicatedUsage"]), out var dedicatedUsage) ||
+                        dedicatedUsage <= 0)
+                        continue;
+
+                    var luid = ExtractGpuLuid(name);
+                    if (luid is not null)
+                        dedicatedAdapters.Add(luid);
+                }
+            }
+        }
+
+        using var engineQuery = new ManagementObjectSearcher(
+            "SELECT Name, UtilizationPercentage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
+        using var engineRows = engineQuery.Get();
+        var engineUsage = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
+        foreach (ManagementObject row in engineRows)
+        {
+            using (row)
+            {
+                var name = Convert.ToString(row["Name"]);
+                if (string.IsNullOrWhiteSpace(name) ||
+                    !double.TryParse(Convert.ToString(row["UtilizationPercentage"]), out var utilization) ||
+                    utilization < 0)
+                    continue;
+
+                var luid = ExtractGpuLuid(name);
+                if (luid is null || (dedicatedAdapters.Count > 0 && !dedicatedAdapters.Contains(luid)))
+                    continue;
+
+                var engineType = ExtractGpuEngineType(name) ?? "unknown";
+                if (!engineUsage.TryGetValue(luid, out var byType))
+                {
+                    byType = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                    engineUsage.Add(luid, byType);
+                }
+
+                byType[engineType] = Math.Max(byType.GetValueOrDefault(engineType), utilization);
+            }
+        }
+
+        var selectedUsage = engineUsage.Values
+            .SelectMany(byType => byType.Values)
+            .DefaultIfEmpty()
+            .Max();
+        return engineUsage.Count == 0 ? null : Math.Clamp(selectedUsage, 0, 100);
+    }
+
+    private static string? ExtractGpuLuid(string name)
+    {
+        const string marker = "_luid_";
+        var start = name.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+            return null;
+
+        start += marker.Length;
+        var end = name.IndexOf("_phys_", start, StringComparison.OrdinalIgnoreCase);
+        return end > start ? name[start..end] : null;
+    }
+
+    private static string? ExtractGpuEngineType(string name)
+    {
+        const string marker = "_engtype_";
+        var start = name.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        return start < 0 ? null : name[(start + marker.Length)..];
     }
 
     private static double? ReadLenovoFeature(ManagementObject row, uint id)

@@ -71,6 +71,48 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
         await _readLock.WaitAsync(cancellationToken);
         try
         {
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                try
+                {
+                    var reading = await ReadServiceTelemetryOnceAsync(cancellationToken);
+                    if (reading is not null)
+                        return reading;
+                    break;
+                }
+                catch (Exception ex) when (attempt == 0 &&
+                                           ex is IOException
+                                               or System.TimeoutException
+                                               or UnauthorizedAccessException)
+                {
+                    Log($"retry {ex.GetType().Name}: {ex.Message}");
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                }
+            }
+
+            return await ReadFallbackOrCachedAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is JsonException
+                                   or IOException
+                                   or OperationCanceledException
+                                   or System.TimeoutException
+                                   or UnauthorizedAccessException)
+        {
+            Log($"fallback {ex.GetType().Name}: {ex.Message}");
+            return await ReadFallbackOrCachedAsync(cancellationToken);
+        }
+        finally
+        {
+            _readLock.Release();
+        }
+    }
+
+    private async Task<SensorReading?> ReadServiceTelemetryOnceAsync(CancellationToken cancellationToken)
+    {
             using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName,
                 PipeDirection.InOut, PipeOptions.Asynchronous);
             await pipe.ConnectAsync(5000, cancellationToken);
@@ -95,26 +137,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
                 return response.Reading;
             }
 
-            return await ReadFallbackOrCachedAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is JsonException
-                                   or IOException
-                                   or OperationCanceledException
-                                   or System.TimeoutException
-                                   or UnauthorizedAccessException)
-        {
-            Log($"fallback {ex.GetType().Name}: {ex.Message}");
-            return await ReadFallbackOrCachedAsync(cancellationToken);
-        }
-
-        finally
-        {
-            _readLock.Release();
-        }
+            return null;
     }
 
     private async Task<SensorReading> ReadFallbackOrCachedAsync(CancellationToken cancellationToken)
