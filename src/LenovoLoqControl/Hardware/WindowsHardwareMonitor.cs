@@ -208,7 +208,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             parameters["IDs"] = id;
             var result = row.InvokeMethod("GetFeatureValue", parameters, new InvokeMethodOptions());
             var value = Convert.ToDouble(result?["Value"] ?? -1);
-            return value >= 0 ? value : null;
+            return value > 0 ? value : null;
         }
         catch (ManagementException) { return null; }
         catch (InvalidOperationException) { return null; }
