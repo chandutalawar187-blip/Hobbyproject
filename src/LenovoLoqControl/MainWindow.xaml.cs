@@ -59,8 +59,6 @@ public partial class MainWindow : Window
         _dashboard = new DashboardView(_hardware);
         ApplyIdentity();
         ApplyProviderStatus();
-        HeaderVersionText.Text = $"v{Services.UpdateService.DisplayVersion}";
-        StatusBarVersion.Text = $"v{Services.UpdateService.DisplayVersion}";
         PageTitleText.Text = "Dashboard";
         PageSubtitleText.Text = "Hardware status and live telemetry";
         SelectNav(NavDashboard);

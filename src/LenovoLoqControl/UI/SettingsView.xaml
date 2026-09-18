@@ -25,14 +25,20 @@
 
       <Border Style="{StaticResource Panel.Section}">
         <StackPanel>
-          <TextBlock Style="{StaticResource Text.Subtitle}" Text="About LOQ Control"/>
+          <TextBlock Style="{StaticResource Text.Subtitle}" Text="Application info"/>
           <TextBlock x:Name="VersionText"
                      Style="{StaticResource Text.BodySecondary}"
                      Margin="0,8,0,0"
                      Text="Version"/>
           <TextBlock Style="{StaticResource Text.BodySecondary}"
                      Margin="0,4,0,0"
-                     Text="Native Lenovo LOQ monitoring and hardware safety controls."/>
+                     Text="LOQ Control is a native Windows control center for Lenovo LOQ laptops."/>
+          <TextBlock Style="{StaticResource Text.BodySecondary}"
+                     Margin="0,4,0,0"
+                     Text="Designed for reliable telemetry, verified firmware controls, and safe hardware fallbacks."/>
+          <TextBlock Style="{StaticResource Text.Caption}"
+                     Margin="0,12,0,0"
+                     Text="Windows 10/11 · x64 · Lenovo LOQ"/>
         </StackPanel>
       </Border>
 
