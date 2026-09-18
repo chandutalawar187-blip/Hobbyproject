@@ -33,7 +33,7 @@ public sealed class FallbackFanController(IFanController primary, IFanController
             if (fallbackResult.Accepted)
                 return new FanControlResult(true, $"{mode} firmware mode applied through EnergyDrv fallback.");
 
-            return new FanControlResult(false, $"{result.Message} Fallback: {fallbackResult.Message}");
+            return result;
         }
 
         return await fallback.SetFanModeAsync(mode, cancellationToken);
