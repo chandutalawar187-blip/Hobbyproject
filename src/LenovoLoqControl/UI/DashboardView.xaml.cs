@@ -71,7 +71,7 @@ public partial class DashboardView : UserControl
             ApplyReading(reading);
             try
             {
-                await ApplyModeAsync();
+                await ApplyModeAsync().WaitAsync(TimeSpan.FromSeconds(5));
             }
             catch (Exception ex) when (ex is IOException
                                        or JsonException
