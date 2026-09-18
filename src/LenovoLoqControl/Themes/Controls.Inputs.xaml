@@ -63,7 +63,7 @@
     </Setter>
   </Style>
 
-  <!-- Compact slider with a clear accent track and accessible thumb. -->
+  <!-- Professional control-center slider: recessed rail, accent progress, compact thumb. -->
   <Style x:Key="Slider.RepeatTransparent" TargetType="RepeatButton">
     <Setter Property="OverridesDefaultStyle" Value="True"/>
     <Setter Property="Focusable" Value="False"/>
@@ -85,8 +85,8 @@
       <Setter.Value>
         <ControlTemplate TargetType="RepeatButton">
           <Border Background="{DynamicResource Brush.SliderTrack}"
-                  Height="6"
-                  CornerRadius="3"
+                  Height="8"
+                  CornerRadius="4"
                   SnapsToDevicePixels="True"/>
         </ControlTemplate>
       </Setter.Value>
@@ -95,128 +95,42 @@
 
   <Style x:Key="Slider.Thumb" TargetType="Thumb">
     <Setter Property="OverridesDefaultStyle" Value="True"/>
-    <Setter Property="Width" Value="28"/>
-    <Setter Property="Height" Value="24"/>
+    <Setter Property="Width" Value="26"/>
+    <Setter Property="Height" Value="32"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
-          <!-- Compact hit target on the track; value pin floats above and does not shift the knob. -->
-          <Grid Width="28" Height="24" Background="Transparent" ClipToBounds="False">
-            <Grid x:Name="ValuePin"
-                  Width="34" Height="34"
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Center"
-                  Margin="0,-36,0,0"
-                  IsHitTestVisible="False"
-                  Opacity="0"
-                  RenderTransformOrigin="0.5,1">
-              <Grid.RenderTransform>
-                <ScaleTransform ScaleX="0.72" ScaleY="0.72"/>
-              </Grid.RenderTransform>
-              <Path Fill="{DynamicResource Brush.SliderPin}"
-                    Data="M15,33 C15,33 2,20 2,13 C2,6.4 7.4,1 15,1 C22.6,1 28,6.4 28,13 C28,20 15,33 15,33 Z"
-                    Stretch="Fill"
-                    Width="32" Height="32"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top">
-                <Path.Effect>
-                  <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270"
-                                    Opacity="0.35" Color="#FF7043"/>
-                </Path.Effect>
-              </Path>
-              <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType=Slider}, StringFormat={}{0:0}}"
-                         Foreground="White"
-                         FontWeight="Bold"
-                         FontSize="10"
-                         FontFamily="{DynamicResource Font.UI}"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Top"
-                         Margin="0,7,0,0"/>
-            </Grid>
-
-            <Grid Width="24" Height="24"
+          <Grid Width="26" Height="32" Background="Transparent" ClipToBounds="False">
+            <Grid Width="26" Height="26"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
               <Ellipse x:Name="Halo"
-                       Width="24" Height="24"
+                       Width="26" Height="26"
                        Fill="{DynamicResource Brush.SliderHalo}"
                        Opacity="0"/>
               <Ellipse x:Name="Knob"
-                       Width="14" Height="14"
+                       Width="18" Height="18"
                        Fill="{DynamicResource Brush.SliderThumb}"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center">
                 <Ellipse.Effect>
-                  <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.35" Color="#FFFFFF"/>
+                  <DropShadowEffect BlurRadius="7" ShadowDepth="1" Direction="270"
+                                    Opacity="0.45" Color="#000000"/>
                 </Ellipse.Effect>
               </Ellipse>
             </Grid>
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Halo" Property="Opacity" Value="0.5"/>
-              <Setter TargetName="Halo" Property="Width" Value="24"/>
-              <Setter TargetName="Halo" Property="Height" Value="24"/>
+              <Setter TargetName="Halo" Property="Opacity" Value="0.4"/>
+              <Setter TargetName="Knob" Property="Width" Value="20"/>
+              <Setter TargetName="Knob" Property="Height" Value="20"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="True">
               <Setter TargetName="Halo" Property="Opacity" Value="0.7"/>
-              <Setter TargetName="Knob" Property="Width" Value="16"/>
-              <Setter TargetName="Knob" Property="Height" Value="16"/>
-              <Trigger.EnterActions>
-                <BeginStoryboard>
-                  <Storyboard>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="Opacity"
-                                     To="1" Duration="0:0:0.18">
-                      <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                     To="1" Duration="0:0:0.2">
-                      <DoubleAnimation.EasingFunction>
-                        <BackEase EasingMode="EaseOut" Amplitude="0.35"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                     To="1" Duration="0:0:0.2">
-                      <DoubleAnimation.EasingFunction>
-                        <BackEase EasingMode="EaseOut" Amplitude="0.35"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                  </Storyboard>
-                </BeginStoryboard>
-              </Trigger.EnterActions>
-              <Trigger.ExitActions>
-                <BeginStoryboard>
-                  <Storyboard>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="Opacity"
-                                     To="0" Duration="0:0:0.14">
-                      <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseIn"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                     To="0.72" Duration="0:0:0.14">
-                      <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseIn"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                    <DoubleAnimation Storyboard.TargetName="ValuePin"
-                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                     To="0.72" Duration="0:0:0.14">
-                      <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseIn"/>
-                      </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                  </Storyboard>
-                </BeginStoryboard>
-              </Trigger.ExitActions>
+              <Setter TargetName="Knob" Property="Width" Value="21"/>
+              <Setter TargetName="Knob" Property="Height" Value="21"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -241,12 +155,11 @@
 
       <Grid Grid.Row="1"
             MinWidth="120"
-            VerticalAlignment="Center"
-            Margin="0,0,0,0">
+            VerticalAlignment="Center">
         <Grid VerticalAlignment="Center">
           <!-- Inactive track -->
-          <Border Height="6"
-                  CornerRadius="3"
+          <Border Height="8"
+                  CornerRadius="4"
                   Background="{DynamicResource Brush.SliderTrackMuted}"
                   VerticalAlignment="Center"/>
 
@@ -315,8 +228,8 @@
     <Setter Property="Background" Value="{DynamicResource Brush.SliderPill}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.SliderPillEdge}"/>
     <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False"/>
-    <Setter Property="MinHeight" Value="40"/>
-    <Setter Property="Height" Value="40"/>
+    <Setter Property="MinHeight" Value="44"/>
+    <Setter Property="Height" Value="44"/>
     <Setter Property="IsMoveToPointEnabled" Value="True"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template" Value="{StaticResource Slider.HorizontalTemplate}"/>
