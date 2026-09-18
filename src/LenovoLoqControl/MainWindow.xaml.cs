@@ -196,7 +196,8 @@ public partial class MainWindow : Window
             var reading = await _hardware.Monitor.ReadAsync(CancellationToken.None);
             var state = ThermalSafety.Classify(reading.CpuTemperature);
             ApplyHealth(state, reading);
-            var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
+            using var modeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var mode = await _hardware.FanController.GetCurrentModeAsync(modeTimeout.Token);
             PerformanceModeBadge.Text = mode is FanMode current
                 ? $"Mode · {ModeLabel(current)}"
                 : _hardware.FanController.IsSupported ? "Mode · Not reported" : "Modes unavailable";

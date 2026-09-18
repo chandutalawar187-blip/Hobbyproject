@@ -87,6 +87,7 @@
           <Border Background="{DynamicResource Brush.SliderTrack}"
                   Height="8"
                   CornerRadius="4"
+                  Margin="0,0,13,0"
                   SnapsToDevicePixels="True"/>
         </ControlTemplate>
       </Setter.Value>
@@ -156,13 +157,15 @@
       <Grid Grid.Row="1"
             MinWidth="120"
             VerticalAlignment="Center"
-            Margin="13,0">
+            Margin="13,0"
+            ClipToBounds="True">
         <Grid VerticalAlignment="Center">
           <!-- Inactive track -->
           <Border Height="8"
                   CornerRadius="4"
                   Background="{DynamicResource Brush.SliderTrackMuted}"
-                  VerticalAlignment="Center"/>
+                  VerticalAlignment="Center"
+                  Margin="13,0"/>
 
           <Track x:Name="PART_Track"
                  Minimum="{TemplateBinding Minimum}"
@@ -170,6 +173,7 @@
                  Value="{TemplateBinding Value}"
                  Orientation="{TemplateBinding Orientation}"
                  IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                 Margin="13,0"
                  VerticalAlignment="Center">
             <Track.DecreaseRepeatButton>
               <RepeatButton Style="{StaticResource Slider.RepeatFill}"
