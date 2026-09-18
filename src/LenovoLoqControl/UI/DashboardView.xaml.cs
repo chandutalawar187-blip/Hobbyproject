@@ -71,11 +71,13 @@ public partial class DashboardView : UserControl
             ApplyReading(reading);
             try
             {
-                await ApplyModeAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                using var modeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await ApplyModeAsync(modeTimeout.Token);
             }
             catch (Exception ex) when (ex is IOException
                                        or JsonException
                                        or InvalidOperationException
+                                       or OperationCanceledException
                                        or TimeoutException
                                        or UnauthorizedAccessException
                                        or System.ComponentModel.Win32Exception)
@@ -96,9 +98,9 @@ public partial class DashboardView : UserControl
         }
     }
 
-    private async Task ApplyModeAsync()
+    private async Task ApplyModeAsync(CancellationToken cancellationToken)
     {
-        var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
+        var mode = await _hardware.FanController.GetCurrentModeAsync(cancellationToken);
         var text = mode is FanMode current ? current switch
         {
             FanMode.Custom => "Custom",
