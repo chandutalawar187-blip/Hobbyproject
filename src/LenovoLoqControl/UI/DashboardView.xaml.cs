@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.IO;
+using System.Text.Json;
 using LenovoLoqControl.Core;
 using LenovoLoqControl.Hardware;
 using LenovoLoqControl.Services;
@@ -67,7 +69,20 @@ public partial class DashboardView : UserControl
         {
             var reading = await _hardware.Monitor.ReadAsync(CancellationToken.None);
             ApplyReading(reading);
-            await ApplyModeAsync();
+            try
+            {
+                await ApplyModeAsync();
+            }
+            catch (Exception ex) when (ex is IOException
+                                       or JsonException
+                                       or InvalidOperationException
+                                       or TimeoutException
+                                       or UnauthorizedAccessException
+                                       or System.ComponentModel.Win32Exception)
+            {
+                OverviewModeText.Text = "Mode · Unavailable";
+                FanModeText.Text = "Fan mode · Unavailable";
+            }
             LastUpdatedText.Text = $"Last updated  {reading.Timestamp.ToLocalTime():HH:mm:ss}";
         }
         catch (Exception ex) when (ex is ManagementException or TimeoutException or UnauthorizedAccessException)
