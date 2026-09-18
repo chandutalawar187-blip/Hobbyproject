@@ -63,7 +63,7 @@
     </Setter>
   </Style>
 
-  <!-- Award-style glass slider: dark pill, Lenovo accent track, white thumb, warm value pin. -->
+  <!-- Compact slider with a clear accent track and accessible thumb. -->
   <Style x:Key="Slider.RepeatTransparent" TargetType="RepeatButton">
     <Setter Property="OverridesDefaultStyle" Value="True"/>
     <Setter Property="Focusable" Value="False"/>
@@ -95,14 +95,14 @@
 
   <Style x:Key="Slider.Thumb" TargetType="Thumb">
     <Setter Property="OverridesDefaultStyle" Value="True"/>
-    <Setter Property="Width" Value="40"/>
-    <Setter Property="Height" Value="28"/>
+    <Setter Property="Width" Value="28"/>
+    <Setter Property="Height" Value="24"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
           <!-- Compact hit target on the track; value pin floats above and does not shift the knob. -->
-          <Grid Width="40" Height="28" Background="Transparent" ClipToBounds="False">
+          <Grid Width="28" Height="24" Background="Transparent" ClipToBounds="False">
             <Grid x:Name="ValuePin"
                   Width="34" Height="34"
                   HorizontalAlignment="Center"
@@ -135,15 +135,15 @@
                          Margin="0,7,0,0"/>
             </Grid>
 
-            <Grid Width="28" Height="28"
+            <Grid Width="24" Height="24"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
               <Ellipse x:Name="Halo"
-                       Width="28" Height="28"
+                       Width="24" Height="24"
                        Fill="{DynamicResource Brush.SliderHalo}"
-                       Opacity="0.55"/>
+                       Opacity="0"/>
               <Ellipse x:Name="Knob"
-                       Width="16" Height="16"
+                       Width="14" Height="14"
                        Fill="{DynamicResource Brush.SliderThumb}"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center">
@@ -155,14 +155,14 @@
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Halo" Property="Opacity" Value="0.85"/>
-              <Setter TargetName="Halo" Property="Width" Value="30"/>
-              <Setter TargetName="Halo" Property="Height" Value="30"/>
+              <Setter TargetName="Halo" Property="Opacity" Value="0.5"/>
+              <Setter TargetName="Halo" Property="Width" Value="24"/>
+              <Setter TargetName="Halo" Property="Height" Value="24"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="True">
-              <Setter TargetName="Halo" Property="Opacity" Value="1"/>
-              <Setter TargetName="Knob" Property="Width" Value="17"/>
-              <Setter TargetName="Knob" Property="Height" Value="17"/>
+              <Setter TargetName="Halo" Property="Opacity" Value="0.7"/>
+              <Setter TargetName="Knob" Property="Width" Value="16"/>
+              <Setter TargetName="Knob" Property="Height" Value="16"/>
               <Trigger.EnterActions>
                 <BeginStoryboard>
                   <Storyboard>
@@ -239,22 +239,10 @@
                Placement="Top"
                Fill="{DynamicResource Brush.SliderTrack}"/>
 
-      <!-- Dark glass pill matched to elevated card surfaces -->
-      <Border Grid.Row="1"
-              Height="40"
-              MinWidth="120"
-              CornerRadius="20"
-              Background="{DynamicResource Brush.SliderPillFill}"
-              BorderBrush="{DynamicResource Brush.SliderPillEdge}"
-              BorderThickness="1"
-              Padding="14,0"
-              SnapsToDevicePixels="True"
-              VerticalAlignment="Center">
-        <Border.Effect>
-          <DropShadowEffect BlurRadius="16" ShadowDepth="2" Direction="270"
-                            Opacity="0.35" Color="#000000"/>
-        </Border.Effect>
-
+      <Grid Grid.Row="1"
+            MinWidth="120"
+            VerticalAlignment="Center"
+            Margin="0,0,0,0">
         <Grid VerticalAlignment="Center">
           <!-- Inactive track -->
           <Border Height="6"
@@ -282,7 +270,7 @@
             </Track.IncreaseRepeatButton>
           </Track>
         </Grid>
-      </Border>
+      </Grid>
 
       <TickBar x:Name="BottomTick"
                Grid.Row="2"
@@ -327,8 +315,8 @@
     <Setter Property="Background" Value="{DynamicResource Brush.SliderPill}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.SliderPillEdge}"/>
     <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False"/>
-    <Setter Property="MinHeight" Value="58"/>
-    <Setter Property="Height" Value="58"/>
+    <Setter Property="MinHeight" Value="40"/>
+    <Setter Property="Height" Value="40"/>
     <Setter Property="IsMoveToPointEnabled" Value="True"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template" Value="{StaticResource Slider.HorizontalTemplate}"/>
