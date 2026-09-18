@@ -5,14 +5,12 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using LenovoLoqControl.Core;
 using LenovoLoqControl.Hardware;
-using LenovoLoqControl.Services;
 
 namespace LenovoLoqControl.UI;
 
 public partial class DashboardView : UserControl
 {
     private readonly IHardwareBackend _hardware;
-    private readonly LenovoVantageDisabler _integration = new();
     private readonly DispatcherTimer _timer;
     private bool _refreshing;
 
@@ -29,7 +27,6 @@ public partial class DashboardView : UserControl
         {
             _timer.Start();
             await RefreshAsync();
-            await RefreshIntegrationAsync();
         };
         Unloaded += (_, _) => _timer.Stop();
     }
@@ -182,28 +179,6 @@ public partial class DashboardView : UserControl
             ? $"Health · {label} · CPU {t:0}°C"
             : $"Health · {label}";
         OverviewHealthBadge.ToolTip = OverviewHealthText.Text;
-    }
-
-    private async Task RefreshIntegrationAsync()
-    {
-        try
-        {
-            var status = await _integration.GetStatusAsync(CancellationToken.None);
-            if (!status.Installed)
-            {
-                IntegrationText.Text = "Not installed";
-                IntegrationDetailText.Text = status.Message;
-                return;
-            }
-
-            IntegrationText.Text = status.Enabled ? "ImController enabled" : "ImController disabled";
-            IntegrationDetailText.Text = status.Message;
-        }
-        catch (Exception ex)
-        {
-            IntegrationText.Text = "Unavailable";
-            IntegrationDetailText.Text = $"Unable to inspect integration: {ex.Message}";
-        }
     }
 
     private static void SetTemperature(TextBlock target, double? value)

@@ -394,19 +394,7 @@ public static class ElasticSlider
             var atMin = _slider.Value <= _slider.Minimum + (range * 0.001);
             var atMax = _slider.Value >= _slider.Maximum - (range * 0.001);
 
-            if (atMin && posInTrackHost.X < thumbCenter)
-            {
-                var over = thumbCenter - posInTrackHost.X;
-                stretch = 1 + Math.Min(MaxRubberStretch, over / 90.0);
-                originX = 0;
-            }
-            else if (atMax && posInTrackHost.X > thumbCenter)
-            {
-                var over = posInTrackHost.X - thumbCenter;
-                stretch = 1 + Math.Min(MaxRubberStretch, over / 90.0);
-                originX = 1;
-            }
-            else
+            if (!atMin && !atMax)
             {
                 var speed = Math.Abs(_velocityPxPerSec);
                 stretch = 1 + Math.Min(MaxVelocityStretch, speed / 2800.0);
@@ -418,13 +406,7 @@ public static class ElasticSlider
             _thumbScale.ScaleY = 1 - Math.Min(0.1, (stretch - 1) * 0.35);
 
             if (_fillScale is not null)
-            {
-                _fill!.RenderTransformOrigin = new Point(0, 0.5);
-                // Mild fill stretch only near the max end so the bar feels elastic too.
-                _fillScale.ScaleX = atMax && stretch > 1
-                    ? 1 + ((stretch - 1) * 0.45)
-                    : 1;
-            }
+                _fillScale.ScaleX = 1;
         }
 
         private void PlayJumpSettle(double fromValue, double toValue)
@@ -483,7 +465,11 @@ public static class ElasticSlider
 
             StopSettle();
 
-            var impulse = Math.Clamp(_velocityPxPerSec * 0.045, -28, 28);
+            var atEndpoint = _slider.Value <= _slider.Minimum
+                || _slider.Value >= _slider.Maximum;
+            var impulse = atEndpoint
+                ? 0
+                : Math.Clamp(_velocityPxPerSec * 0.045, -28, 28);
             if (Math.Abs(impulse) > 1.5 && Math.Abs(_thumbTranslate.X) < 0.5)
                 _thumbTranslate.X = impulse;
 

@@ -175,15 +175,6 @@
                        TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
-        <Border Style="{StaticResource Card.Compact}">
-          <StackPanel>
-            <TextBlock Style="{StaticResource Dash.MetricLabel}" Text="LENOVO INTEGRATION"/>
-            <TextBlock x:Name="IntegrationText" Style="{StaticResource Text.Subtitle}" Text="Loading"
-                       TextWrapping="Wrap"/>
-            <TextBlock x:Name="IntegrationDetailText" Style="{StaticResource Dash.MetricMuted}" Text="…"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
-        </Border>
       </UniformGrid>
 
       <TextBlock x:Name="LastUpdatedText"
