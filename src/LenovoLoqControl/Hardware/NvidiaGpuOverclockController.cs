@@ -53,14 +53,14 @@ public sealed class NvidiaGpuOverclockController : IGpuOverclockController
 
     public double? ReadCurrentGraphicsClockGhz()
     {
-        if (!IsSupported || _gpu is null)
-            return null;
-
         lock (_sync)
         {
+            var gpu = _gpu;
+            if (!_initialized || !IsSupported || gpu is null)
+                return null;
             try
             {
-                var frequencies = GPUApi.GetAllClockFrequencies(_gpu.Handle, null);
+                var frequencies = GPUApi.GetAllClockFrequencies(gpu.Handle, null);
                 var frequencyKHz = frequencies.GraphicsClock.Frequency;
                 return frequencyKHz > 0 ? frequencyKHz / 1_000_000d : null;
             }
@@ -74,19 +74,20 @@ public sealed class NvidiaGpuOverclockController : IGpuOverclockController
     public Task<FanControlResult> ApplyAsync(int coreOffsetMhz, int memoryOffsetMhz, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!IsSupported || _gpu is null)
-            return Task.FromResult(FanControlResult.Unsupported(AvailabilityMessage));
-
-        if (!IsAcConnected())
-            return Task.FromResult(new FanControlResult(false, "GPU overclocking requires AC power."));
-
         coreOffsetMhz = Math.Clamp(coreOffsetMhz, 0, MaxCoreOffsetMhz);
         memoryOffsetMhz = Math.Clamp(memoryOffsetMhz, 0, MaxMemoryOffsetMhz);
         lock (_sync)
         {
+            var gpu = _gpu;
+            if (!_initialized || !IsSupported || gpu is null)
+                return Task.FromResult(FanControlResult.Unsupported(AvailabilityMessage));
+
+            if (!IsAcConnected())
+                return Task.FromResult(new FanControlResult(false, "GPU overclocking requires AC power."));
+
             try
             {
-                SetOverclockInfo(_gpu, coreOffsetMhz, memoryOffsetMhz);
+                SetOverclockInfo(gpu, coreOffsetMhz, memoryOffsetMhz);
                 return Task.FromResult(new FanControlResult(true,
                     $"GPU overclock applied: core +{coreOffsetMhz} MHz, VRAM +{memoryOffsetMhz} MHz."));
             }
@@ -118,10 +119,13 @@ public sealed class NvidiaGpuOverclockController : IGpuOverclockController
 
     public void Dispose()
     {
-        if (!_initialized) return;
-        try { GeneralApi.Unload(); } catch (NVIDIAApiException) { }
-        _initialized = false;
-        _gpu = null;
+        lock (_sync)
+        {
+            if (!_initialized) return;
+            try { GeneralApi.Unload(); } catch (NVIDIAApiException) { }
+            _initialized = false;
+            _gpu = null;
+        }
     }
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]

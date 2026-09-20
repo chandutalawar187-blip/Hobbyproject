@@ -14,8 +14,11 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private readonly Func<double?> _gpuClockReader;
     private readonly object _cacheLock = new();
+    private readonly object _lifecycleLock = new();
+    private Task? _disposeTask;
     private SensorReading? _cachedReading;
     private DateTimeOffset _cachedAt;
+    private int _disposed;
     public HardwareIdentity Identity { get; }
 
     public WindowsHardwareMonitor(Func<double?>? gpuClockReader = null)
@@ -60,6 +63,8 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
 
     public async Task<SensorReading> ReadAsync(CancellationToken cancellationToken)
     {
+        lock (_lifecycleLock)
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
         lock (_cacheLock)
         {
             if (_cachedReading is not null &&
@@ -67,9 +72,19 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                 return _cachedReading;
         }
 
-        await _readLock.WaitAsync(cancellationToken);
+        lock (_lifecycleLock)
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        var lockHeld = false;
         try
         {
+            await _readLock.WaitAsync(cancellationToken);
+            lockHeld = true;
+            lock (_lifecycleLock)
+            {
+                if (_disposed != 0)
+                    ObjectDisposedException.ThrowIf(true, this);
+            }
+
             lock (_cacheLock)
             {
                 if (_cachedReading is not null &&
@@ -88,7 +103,8 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         }
         finally
         {
-            _readLock.Release();
+            if (lockHeld)
+                _readLock.Release();
         }
     }
 
@@ -193,7 +209,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     {
         var dedicatedAdapters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using (var adapterQuery = new ManagementObjectSearcher(
-                   "SELECT Name, DedicatedUsage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
+                   "SELECT Name, DedicatedUsage, DedicatedLimit FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
         using (var adapterRows = adapterQuery.Get())
         {
             foreach (ManagementObject row in adapterRows)
@@ -201,11 +217,17 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                 using (row)
                 {
                     var name = Convert.ToString(row["Name"]);
-                    if (string.IsNullOrWhiteSpace(name) ||
-                        !double.TryParse(Convert.ToString(row["DedicatedUsage"]), out var dedicatedUsage) ||
-                        dedicatedUsage <= 0)
+                    if (string.IsNullOrWhiteSpace(name))
                         continue;
 
+                    var dedicatedLimit = double.TryParse(Convert.ToString(row["DedicatedLimit"]), out var limit)
+                        ? limit
+                        : 0;
+                    var dedicatedUsage = double.TryParse(Convert.ToString(row["DedicatedUsage"]), out var usage)
+                        ? usage
+                        : 0;
+                    if (dedicatedLimit <= 0 && dedicatedUsage <= 0)
+                        continue;
                     var luid = ExtractGpuLuid(name);
                     if (luid is not null)
                         dedicatedAdapters.Add(luid);
@@ -215,6 +237,9 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
 
         using var engineQuery = new ManagementObjectSearcher(
             "SELECT Name, UtilizationPercentage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
+        if (dedicatedAdapters.Count == 0)
+            return null;
+
         using var engineRows = engineQuery.Get();
         var engineUsage = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
         foreach (ManagementObject row in engineRows)
@@ -228,7 +253,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                     continue;
 
                 var luid = ExtractGpuLuid(name);
-                if (luid is null || (dedicatedAdapters.Count > 0 && !dedicatedAdapters.Contains(luid)))
+                if (luid is null || !dedicatedAdapters.Contains(luid))
                     continue;
 
                 var engineType = ExtractGpuEngineType(name) ?? "unknown";
@@ -329,5 +354,33 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         catch (InvalidOperationException) { return null; }
     }
 
-    public void Dispose() => _readLock.Dispose();
+    public void Dispose()
+    {
+        lock (_lifecycleLock)
+        {
+            if (_disposed != 0)
+                return;
+            _disposed = 1;
+        }
+
+        lock (_lifecycleLock)
+            _disposeTask ??= DrainAndDisposeAsync();
+    }
+
+    private async Task DrainAndDisposeAsync()
+    {
+        try
+        {
+            if (!await _readLock.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false))
+                await _readLock.WaitAsync().ConfigureAwait(false);
+            _readLock.Release();
+            _readLock.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception)
+        {
+        }
+    }
 }

@@ -7,8 +7,11 @@ namespace LenovoLoqControl.Hardware;
 public sealed class LenovoWmiFanController : IFanController
 {
     private readonly SemaphoreSlim _commandLock = new(1, 1);
+    private readonly object _lifecycleLock = new();
     private readonly ILenovoWmiOperations _operations;
     private readonly bool _isSupported;
+    private Task? _disposeTask;
+    private bool _disposed;
 
     public LenovoWmiFanController(ILenovoWmiOperations? operations = null)
     {
@@ -27,7 +30,7 @@ public sealed class LenovoWmiFanController : IFanController
         if (!_isSupported)
             return null;
 
-        await _commandLock.WaitAsync(cancellationToken);
+        await EnterCommandAsync(cancellationToken);
         try
         {
             return await Task.Run<FanMode?>(() => _operations.GetSmartFanMode() switch
@@ -56,7 +59,7 @@ public sealed class LenovoWmiFanController : IFanController
         if (!_isSupported)
             return null;
 
-        await _commandLock.WaitAsync(cancellationToken);
+        await EnterCommandAsync(cancellationToken);
         try
         {
             return _operations.ReadCustomFanTable();
@@ -78,9 +81,9 @@ public sealed class LenovoWmiFanController : IFanController
             return FanControlResult.Unsupported(AvailabilityMessage);
 
         if (mode is FanMode.Performance or FanMode.MaxCooling && !IsAcConnected())
-            return new FanControlResult(false, "Performance and Max Cooling require AC power.");
+            return new FanControlResult(false, "Performance and custom modes require AC power.");
 
-        await _commandLock.WaitAsync(cancellationToken);
+        await EnterCommandAsync(cancellationToken);
         try
         {
             if (mode == FanMode.MaxCooling)
@@ -133,13 +136,13 @@ public sealed class LenovoWmiFanController : IFanController
         if (!_isSupported)
             return FanControlResult.Unsupported(AvailabilityMessage);
         if (!IsAcConnected())
-            return new FanControlResult(false, "Custom fan curves require AC power.");
+            return new FanControlResult(false, "Performance and custom modes require AC power.");
 
         var errors = FanCurveValidator.Validate(curve);
         if (errors.Count > 0)
             return new FanControlResult(false, string.Join(" ", errors));
 
-        await _commandLock.WaitAsync(cancellationToken);
+        await EnterCommandAsync(cancellationToken);
         try
         {
             var table = _operations.ReadCustomFanTable()
@@ -239,7 +242,50 @@ public sealed class LenovoWmiFanController : IFanController
 
     public void Dispose()
     {
-        _commandLock.Dispose();
-        _operations.Dispose();
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+        }
+
+        lock (_lifecycleLock)
+            _disposeTask ??= DrainAndDisposeAsync();
+    }
+
+    private async Task EnterCommandAsync(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+        }
+
+        await _commandLock.WaitAsync(cancellationToken);
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+            {
+                _commandLock.Release();
+                ObjectDisposedException.ThrowIf(true, this);
+            }
+        }
+    }
+
+    private async Task DrainAndDisposeAsync()
+    {
+        try
+        {
+            if (!await _commandLock.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false))
+                await _commandLock.WaitAsync().ConfigureAwait(false);
+            _commandLock.Release();
+            _commandLock.Dispose();
+            _operations.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception)
+        {
+        }
     }
 }
