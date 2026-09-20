@@ -12,11 +12,14 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IHardwareMonitor _fallback;
     private readonly SemaphoreSlim _readLock = new(1, 1);
+    private readonly object _lifecycleLock = new();
+    private Task? _disposeTask;
     private SensorReading? _lastReading;
     private DateTimeOffset _lastReadingAt;
     private static readonly TimeSpan MaxCachedReadingAge = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(5);
     private const long MaxTelemetryLogBytes = 256 * 1024;
+    private int _disposed;
 
     public ServiceHardwareMonitor(IHardwareMonitor fallback)
     {
@@ -28,7 +31,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
 
     public async Task<double?> ReadSsdTemperatureAsync(CancellationToken cancellationToken)
     {
-        await _readLock.WaitAsync(cancellationToken);
+        await EnterReadAsync(cancellationToken);
         try
         {
             using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName,
@@ -62,15 +65,57 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
         }
         finally
         {
-            _readLock.Release();
+            ExitRead();
         }
     }
 
     public async Task<SensorReading> ReadAsync(CancellationToken cancellationToken)
     {
-        await _readLock.WaitAsync(cancellationToken);
+        await EnterReadAsync(cancellationToken);
         try
         {
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                try
+                {
+                    var reading = await ReadServiceTelemetryOnceAsync(cancellationToken);
+                    if (reading is not null)
+                        return reading;
+                    break;
+                }
+                catch (Exception ex) when (attempt == 0 &&
+                                           ex is IOException
+                                               or System.TimeoutException
+                                               or UnauthorizedAccessException)
+                {
+                    Log($"retry {ex.GetType().Name}: {ex.Message}");
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                }
+            }
+
+            return await ReadFallbackOrCachedAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is JsonException
+                                   or IOException
+                                   or OperationCanceledException
+                                   or System.TimeoutException
+                                   or UnauthorizedAccessException)
+        {
+            Log($"fallback {ex.GetType().Name}: {ex.Message}");
+            return await ReadFallbackOrCachedAsync(cancellationToken);
+        }
+        finally
+        {
+            ExitRead();
+        }
+    }
+
+    private async Task<SensorReading?> ReadServiceTelemetryOnceAsync(CancellationToken cancellationToken)
+    {
             using var pipe = new NamedPipeClientStream(".", ServiceProtocol.PipeName,
                 PipeDirection.InOut, PipeOptions.Asynchronous);
             await pipe.ConnectAsync(5000, cancellationToken);
@@ -95,26 +140,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
                 return response.Reading;
             }
 
-            return await ReadFallbackOrCachedAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is JsonException
-                                   or IOException
-                                   or OperationCanceledException
-                                   or System.TimeoutException
-                                   or UnauthorizedAccessException)
-        {
-            Log($"fallback {ex.GetType().Name}: {ex.Message}");
-            return await ReadFallbackOrCachedAsync(cancellationToken);
-        }
-
-        finally
-        {
-            _readLock.Release();
-        }
+            return null;
     }
 
     private async Task<SensorReading> ReadFallbackOrCachedAsync(CancellationToken cancellationToken)
@@ -133,8 +159,61 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
 
     public void Dispose()
     {
-        _readLock.Dispose();
-        _fallback.Dispose();
+        lock (_lifecycleLock)
+        {
+            if (_disposed != 0)
+                return;
+            _disposed = 1;
+        }
+
+        lock (_lifecycleLock)
+            _disposeTask ??= DrainAndDisposeAsync();
+    }
+
+    private async Task DrainAndDisposeAsync()
+    {
+        try
+        {
+            if (!await _readLock.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false))
+                await _readLock.WaitAsync().ConfigureAwait(false);
+            _readLock.Release();
+            _readLock.Dispose();
+            _fallback.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private async Task EnterReadAsync(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleLock)
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        var lockHeld = false;
+        try
+        {
+            await _readLock.WaitAsync(cancellationToken);
+            lockHeld = true;
+            lock (_lifecycleLock)
+            {
+                if (_disposed != 0)
+                    ObjectDisposedException.ThrowIf(true, this);
+            }
+        }
+        catch
+        {
+            if (lockHeld)
+                _readLock.Release();
+            throw;
+        }
+    }
+
+    private void ExitRead()
+    {
+        _readLock.Release();
     }
 
     private static void Log(string message)

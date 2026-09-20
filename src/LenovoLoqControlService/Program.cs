@@ -37,14 +37,13 @@ internal sealed class LoqHardwareService : ServiceBase
         PropertyNameCaseInsensitive = true
     };
     private HardwareBackend? _hardware;
-    private Timer? _timer;
     private CancellationTokenSource? _pipeCancellation;
     private Task? _pipeTask;
     private readonly SemaphoreSlim _telemetryLock = new(1, 1);
+    private readonly object _telemetryStateLock = new();
     private SensorReading? _cachedTelemetry;
     private DateTimeOffset _cachedTelemetryAt;
-    private int _running;
-    private FanMode? _lastMode;
+    private Task<SensorReading>? _telemetryReadTask;
 
     public LoqHardwareService()
     {
@@ -59,13 +58,10 @@ internal sealed class LoqHardwareService : ServiceBase
         _hardware = new HardwareBackend(useElevatedService: false);
         _pipeCancellation = new CancellationTokenSource();
         _pipeTask = RunPipeServerAsync(_pipeCancellation.Token);
-        _timer = new Timer(EnforceCurrentMode, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
     }
 
     protected override void OnStop()
     {
-        _timer?.Dispose();
-        _timer = null;
         _pipeCancellation?.Cancel();
         try { _pipeTask?.GetAwaiter().GetResult(); }
         catch (OperationCanceledException) { }
@@ -83,40 +79,6 @@ internal sealed class LoqHardwareService : ServiceBase
         Console.WriteLine("LoqControlHardwareService running. Press Enter to stop.");
         Console.ReadLine();
         OnStop();
-    }
-
-    private void EnforceCurrentMode(object? state)
-    {
-        if (Interlocked.Exchange(ref _running, 1) != 0)
-            return;
-
-        try
-        {
-            var hardware = _hardware;
-            if (hardware is null || !hardware.FanController.IsSupported)
-                return;
-
-            var mode = hardware.FanController.GetCurrentModeAsync(CancellationToken.None)
-                .GetAwaiter().GetResult();
-            if (mode is FanMode.Quiet or FanMode.Auto or FanMode.Balanced or FanMode.Performance
-                && mode != _lastMode)
-            {
-                hardware.FanController.SetFanModeAsync(mode.Value, CancellationToken.None)
-                    .GetAwaiter().GetResult();
-                _lastMode = mode;
-            }
-        }
-        catch (Exception ex) when (ex is InvalidOperationException
-                                   or System.TimeoutException
-                                   or UnauthorizedAccessException
-                                   or System.Management.ManagementException)
-        {
-            // The service must remain alive if firmware temporarily rejects a poll.
-        }
-        finally
-        {
-            Volatile.Write(ref _running, 0);
-        }
     }
 
     private async Task RunPipeServerAsync(CancellationToken cancellationToken)
@@ -143,6 +105,7 @@ internal sealed class LoqHardwareService : ServiceBase
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
+                    var recycleServer = false;
                     try
                     {
                         await server.WaitForConnectionAsync(cancellationToken);
@@ -166,7 +129,7 @@ internal sealed class LoqHardwareService : ServiceBase
                         }
                         else try
                         {
-                            response = await HandleRequestAsync(line, cancellationToken);
+                            response = await HandleRequestAsync(line, requestTimeout.Token);
                         }
                         catch (Exception ex) when (ex is InvalidOperationException
                                                    or System.TimeoutException
@@ -180,7 +143,6 @@ internal sealed class LoqHardwareService : ServiceBase
                         }
 
                         await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
-                        await DrainPipeAsync(server, cancellationToken);
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
@@ -202,7 +164,11 @@ internal sealed class LoqHardwareService : ServiceBase
                     {
                         if (server.IsConnected)
                             server.Disconnect();
+                        recycleServer = true;
                     }
+
+                    if (recycleServer)
+                        break;
                 }
             }
         }
@@ -256,32 +222,6 @@ internal sealed class LoqHardwareService : ServiceBase
         catch (IOException)
         {
         }
-    }
-
-    private static async Task DrainPipeAsync(
-        NamedPipeServerStream server,
-        CancellationToken cancellationToken)
-    {
-        var drainTask = Task.Run(server.WaitForPipeDrain, CancellationToken.None);
-        _ = drainTask.ContinueWith(
-            task => _ = task.Exception,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted,
-            TaskScheduler.Default);
-        var completedTask = await Task.WhenAny(
-            drainTask,
-            Task.Delay(TimeSpan.FromSeconds(2), cancellationToken));
-
-        if (completedTask != drainTask)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                cancellationToken.ThrowIfCancellationRequested();
-
-            LogServiceError("Timed out while draining a named-pipe response; disconnecting client.");
-            return;
-        }
-
-        await drainTask;
     }
 
     private async Task<ServiceResponse> HandleRequestAsync(string? line, CancellationToken cancellationToken)
@@ -437,16 +377,57 @@ internal sealed class LoqHardwareService : ServiceBase
         HardwareBackend hardware,
         CancellationToken cancellationToken)
     {
-        await _telemetryLock.WaitAsync(cancellationToken);
-        try
+        Task<SensorReading> readTask;
+        lock (_telemetryStateLock)
         {
             if (_cachedTelemetry is not null &&
                 DateTimeOffset.UtcNow - _cachedTelemetryAt < TimeSpan.FromSeconds(1))
                 return _cachedTelemetry;
 
-            _cachedTelemetry = await hardware.Monitor.ReadAsync(cancellationToken);
-            _cachedTelemetryAt = DateTimeOffset.UtcNow;
-            return _cachedTelemetry;
+            _telemetryReadTask ??= SampleTelemetryAsync(hardware);
+            readTask = _telemetryReadTask;
+        }
+
+        try
+        {
+            return await readTask.WaitAsync(TimeSpan.FromSeconds(4), cancellationToken);
+        }
+        catch (System.TimeoutException)
+        {
+            lock (_telemetryStateLock)
+            {
+                if (_cachedTelemetry is not null)
+                    return _cachedTelemetry;
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (readTask.IsCompleted)
+            {
+                lock (_telemetryStateLock)
+                {
+                    if (ReferenceEquals(_telemetryReadTask, readTask))
+                        _telemetryReadTask = null;
+                }
+            }
+        }
+    }
+
+    private async Task<SensorReading> SampleTelemetryAsync(HardwareBackend hardware)
+    {
+        await _telemetryLock.WaitAsync();
+        try
+        {
+            var reading = await hardware.Monitor.ReadAsync(CancellationToken.None);
+            lock (_telemetryStateLock)
+            {
+                _cachedTelemetry = reading;
+                _cachedTelemetryAt = DateTimeOffset.UtcNow;
+            }
+
+            return reading;
         }
         finally
         {
@@ -458,21 +439,11 @@ internal sealed class LoqHardwareService : ServiceBase
     {
         try
         {
-            var clientName = server.GetImpersonationUserName();
-            if (clientName.Equals("ANONYMOUS LOGON", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            SecurityIdentifier? clientSid = null;
-            server.RunAsClient(() => clientSid = WindowsIdentity.GetCurrent().User);
-            if (clientSid is null ||
-                !GetNamedPipeClientProcessId(server.SafePipeHandle, out var clientProcessId) ||
+            if (!GetNamedPipeClientProcessId(server.SafePipeHandle, out var clientProcessId) ||
                 !ProcessIdToSessionId(clientProcessId, out var clientSessionId))
                 return false;
 
-            if (!IsActiveSession(clientSessionId))
-                return false;
-
-            return clientSid is not null;
+            return IsActiveSession(clientSessionId);
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                    or IOException

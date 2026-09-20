@@ -71,11 +71,11 @@ public sealed class EnergyDrvFanController : IFanController
                 _lastCommand = DateTimeOffset.UtcNow;
                 return result.Success
                     ? new FanControlResult(true, $"{mode} firmware mode applied.")
-                    : new FanControlResult(false, $"EnergyDrv rejected the {mode} request (Windows error {result.ErrorCode}). No mode change was confirmed.");
+                    : new FanControlResult(false, $"EnergyDrv rejected the {mode} request.");
             }
             catch (TimeoutException)
             {
-                return new FanControlResult(false, "EnergyDrv did not respond within 2 seconds. No mode change was confirmed.");
+                return new FanControlResult(false, "EnergyDrv did not respond.");
             }
             finally
             {

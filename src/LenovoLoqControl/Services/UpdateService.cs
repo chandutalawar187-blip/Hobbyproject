@@ -25,9 +25,19 @@ public sealed class UpdateService
         Assembly.GetEntryAssembly()?.GetName().Version
         ?? new Version(1, 0, 0);
 
-    public static string DisplayVersion =>
-        Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? CurrentVersion.ToString(3);
+    public static string DisplayVersion
+    {
+        get
+        {
+            var informationalVersion = Assembly.GetEntryAssembly()?
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+            var version = informationalVersion?.Split('+', 2)[0];
+            return string.IsNullOrWhiteSpace(version)
+                ? CurrentVersion.ToString(3)
+                : version;
+        }
+    }
 
     public async Task<AppUpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken)
     {

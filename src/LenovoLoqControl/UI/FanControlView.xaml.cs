@@ -710,6 +710,12 @@ public partial class FanControlView : UserControl
             var mode = enabled ? FanMode.MaxCooling : FanMode.Custom;
             ShowResult(enabled ? "Enabling Extreme Mode…" : "Disabling Extreme Mode…", accepted: null);
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
+            if (!result.Accepted &&
+                mode is FanMode.MaxCooling &&
+                result.Message.Contains("AC power", StringComparison.OrdinalIgnoreCase))
+            {
+                result = new FanControlResult(false, "Performance and custom modes require AC power.");
+            }
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
             {
@@ -759,6 +765,12 @@ public partial class FanControlView : UserControl
         {
             ShowResult($"Applying {label}…", accepted: null);
             var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
+            if (!result.Accepted &&
+                (mode is FanMode.Performance or FanMode.MaxCooling) &&
+                result.Message.Contains("AC power", StringComparison.OrdinalIgnoreCase))
+            {
+                result = new FanControlResult(false, "Performance and custom modes require AC power.");
+            }
             ShowResult(result.Message, result.Accepted);
             if (result.Accepted)
             {

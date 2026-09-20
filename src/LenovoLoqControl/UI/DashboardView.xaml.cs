@@ -1,35 +1,36 @@
 using System.Management;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using LenovoLoqControl.Core;
 using LenovoLoqControl.Hardware;
-using LenovoLoqControl.Services;
 
 namespace LenovoLoqControl.UI;
 
 public partial class DashboardView : UserControl
 {
     private readonly IHardwareBackend _hardware;
-    private readonly LenovoVantageDisabler _integration = new();
+    private readonly CancellationToken _lifetimeToken;
     private readonly DispatcherTimer _timer;
     private bool _refreshing;
+    private DateTimeOffset _lastModeRefresh;
 
-    public DashboardView(IHardwareBackend? hardware = null)
+    public DashboardView(IHardwareBackend? hardware = null, CancellationToken lifetimeToken = default)
     {
         InitializeComponent();
         _hardware = hardware ?? new HardwareBackend();
+        _lifetimeToken = lifetimeToken;
 
         ApplyStaticIdentity();
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _timer.Tick += async (_, _) => await RefreshAsync();
         Loaded += async (_, _) =>
         {
             _timer.Start();
             await RefreshAsync();
-            await RefreshIntegrationAsync();
         };
         Unloaded += (_, _) => _timer.Stop();
     }
@@ -65,15 +66,23 @@ public partial class DashboardView : UserControl
         _refreshing = true;
         try
         {
-            var reading = await _hardware.Monitor.ReadAsync(CancellationToken.None);
+            var reading = await _hardware.Monitor.ReadAsync(_lifetimeToken);
             ApplyReading(reading);
-            await ApplyModeAsync();
             LastUpdatedText.Text = $"Last updated  {reading.Timestamp.ToLocalTime():HH:mm:ss}";
+            if (DateTimeOffset.UtcNow - _lastModeRefresh >= TimeSpan.FromSeconds(5))
+                await ApplyModeAsync();
         }
-        catch (Exception ex) when (ex is ManagementException or TimeoutException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is OperationCanceledException
+                                       or ManagementException
+                                       or TimeoutException
+                                       or UnauthorizedAccessException
+                                       or ObjectDisposedException)
         {
-            ApplyTelemetryError();
-            LastUpdatedText.Text = "Telemetry error — values not displayed";
+            if (ex is not OperationCanceledException)
+            {
+                ApplyTelemetryError();
+                LastUpdatedText.Text = "Telemetry error — values not displayed";
+            }
         }
         finally
         {
@@ -83,16 +92,35 @@ public partial class DashboardView : UserControl
 
     private async Task ApplyModeAsync()
     {
-        var mode = await _hardware.FanController.GetCurrentModeAsync(CancellationToken.None);
-        var text = mode is FanMode current ? current switch
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        try
         {
-            FanMode.Custom => "Custom",
-            FanMode.Auto => "Automatic",
-            FanMode.MaxCooling => "Max Cooling",
-            _ => current.ToString()
-        } : "Not reported by firmware";
-        OverviewModeText.Text = $"Mode · {text}";
-        FanModeText.Text = $"Fan mode · {text}";
+            var mode = await _hardware.FanController.GetCurrentModeAsync(timeout.Token);
+            var text = mode is FanMode current ? current switch
+            {
+                FanMode.Custom => "Custom",
+                FanMode.Auto => "Automatic",
+                FanMode.MaxCooling => "Max Cooling",
+                _ => current.ToString()
+            } : "Not reported by firmware";
+            OverviewModeText.Text = $"Mode · {text}";
+            FanModeText.Text = $"Fan mode · {text}";
+            _lastModeRefresh = DateTimeOffset.UtcNow;
+        }
+        catch (Exception ex) when (ex is OperationCanceledException
+                                   or TimeoutException
+                                   or UnauthorizedAccessException
+                                   or ManagementException
+                                   or IOException)
+        {
+            OverviewModeText.Text = "Mode · Unavailable";
+            FanModeText.Text = "Fan mode · Unavailable";
+        }
+        finally
+        {
+            _lastModeRefresh = DateTimeOffset.UtcNow;
+        }
     }
 
     private void ApplyReading(SensorReading reading)
@@ -182,28 +210,6 @@ public partial class DashboardView : UserControl
             ? $"Health · {label} · CPU {t:0}°C"
             : $"Health · {label}";
         OverviewHealthBadge.ToolTip = OverviewHealthText.Text;
-    }
-
-    private async Task RefreshIntegrationAsync()
-    {
-        try
-        {
-            var status = await _integration.GetStatusAsync(CancellationToken.None);
-            if (!status.Installed)
-            {
-                IntegrationText.Text = "Not installed";
-                IntegrationDetailText.Text = status.Message;
-                return;
-            }
-
-            IntegrationText.Text = status.Enabled ? "ImController enabled" : "ImController disabled";
-            IntegrationDetailText.Text = status.Message;
-        }
-        catch (Exception ex)
-        {
-            IntegrationText.Text = "Unavailable";
-            IntegrationDetailText.Text = $"Unable to inspect integration: {ex.Message}";
-        }
     }
 
     private static void SetTemperature(TextBlock target, double? value)

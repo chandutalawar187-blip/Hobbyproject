@@ -28,6 +28,9 @@ public sealed class FallbackFanController(IFanController primary, IFanController
             var result = await primary.SetFanModeAsync(mode, cancellationToken);
             if (result.Accepted || !fallback.IsSupported)
                 return result;
+            if ((mode is FanMode.Performance or FanMode.MaxCooling) &&
+                result.Message.Contains("AC power", StringComparison.OrdinalIgnoreCase))
+                return new FanControlResult(false, "Performance and custom modes require AC power.");
 
             var fallbackResult = await fallback.SetFanModeAsync(mode, cancellationToken);
             if (fallbackResult.Accepted)

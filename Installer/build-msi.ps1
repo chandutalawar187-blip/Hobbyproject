@@ -6,7 +6,7 @@ $servicePublishDir = Join-Path $root "artifacts\LoqControlService"
 $serviceBuildDir = Join-Path $root "artifacts\service-build"
 $appBuildDir = Join-Path $root "artifacts\app-build"
 $outputDir = Join-Path $root "artifacts\release"
-$releaseVersion = "1.2.6"
+$releaseVersion = "1.2.8"
 $generatedWxs = Join-Path $outputDir "PublishedFiles.generated.wxs"
 $generatedServiceWxs = Join-Path $outputDir "HardwareServiceFiles.generated.wxs"
 
@@ -61,7 +61,7 @@ $directoryIds = @{
 $publishFiles = @(Get-ChildItem $publishDir -Recurse -File |
     Where-Object { $_.FullName -ne (Join-Path $publishDir "LoqControl.exe") } |
     ForEach-Object {
-    $relative = [System.IO.Path]::GetRelativePath($publishDir, $_.FullName)
+    $relative = $_.FullName.Substring($publishDir.Length).TrimStart('\', '/')
     $relativeDirectory = [System.IO.Path]::GetDirectoryName($relative)
     if ($null -eq $relativeDirectory) { $relativeDirectory = "" }
     [pscustomobject]@{
@@ -121,7 +121,7 @@ $serviceFiles = @(Get-ChildItem $servicePublishDir -Recurse -File |
     ForEach-Object {
         [pscustomobject]@{
             File = $_
-            Relative = [System.IO.Path]::GetRelativePath($servicePublishDir, $_.FullName)
+            Relative = $_.FullName.Substring($servicePublishDir.Length).TrimStart('\', '/')
         }
     })
 $serviceDirectoryIds = @{}
