@@ -5,18 +5,30 @@ namespace LenovoLoqControl.Hardware;
 
 public sealed class HardwareBackend : IHardwareBackend
 {
+    private readonly object _lifecycleLock = new();
+    private readonly Lazy<NvidiaGpuOverclockController> _gpuOverclock = new(
+        static () => new NvidiaGpuOverclockController());
+    private bool _disposed;
+
     public IHardwareMonitor Monitor { get; }
     public IFanController FanController { get; }
-    public IGpuOverclockController GpuOverclock { get; }
+    public IGpuOverclockController GpuOverclock
+    {
+        get
+        {
+            lock (_lifecycleLock)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                return _gpuOverclock.Value;
+            }
+        }
+    }
     public IKeyboardLightController KeyboardLight { get; }
 
     public HardwareBackend(bool useElevatedService = true)
     {
-        GpuOverclock = new NvidiaGpuOverclockController();
         KeyboardLight = new LenovoKeyboardLightController();
-        var localMonitor = new WindowsHardwareMonitor(GpuOverclock is NvidiaGpuOverclockController nvidia
-            ? nvidia.ReadCurrentGraphicsClockGhz
-            : null);
+        var localMonitor = new WindowsHardwareMonitor(ReadGpuClock);
         var serviceFan = useElevatedService ? new ServiceFanController() : null;
         Monitor = serviceFan?.ServiceRunning == true
             ? new ServiceHardwareMonitor(localMonitor)
@@ -41,10 +53,29 @@ public sealed class HardwareBackend : IHardwareBackend
 
     public void Dispose()
     {
-        FanController.Dispose();
-        GpuOverclock.Dispose();
-        KeyboardLight.Dispose();
-        if (!ReferenceEquals(Monitor, null))
-            Monitor.Dispose();
+        NvidiaGpuOverclockController? gpuOverclock = null;
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            FanController.Dispose();
+            if (_gpuOverclock.IsValueCreated)
+                gpuOverclock = _gpuOverclock.Value;
+            KeyboardLight.Dispose();
+        }
+
+        gpuOverclock?.Dispose();
+        Monitor.Dispose();
+    }
+
+    private double? ReadGpuClock()
+    {
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+                return null;
+            return _gpuOverclock.Value.ReadCurrentGraphicsClockGhz();
+        }
     }
 }

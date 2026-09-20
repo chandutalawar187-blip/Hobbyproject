@@ -22,6 +22,7 @@ namespace LenovoLoqControl;
 public partial class MainWindow : Window
 {
     private readonly HardwareBackend _hardware = new();
+    private readonly CancellationTokenSource _lifetimeCts = new();
     private readonly DashboardView _dashboard;
     private readonly DispatcherTimer _shellTimer;
     private readonly Button[] _navButtons;
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private bool _navExpanded = true;
     private double _expandedNavWidth = 220;
     private PageKind _currentPage = PageKind.Dashboard;
+    private DateTimeOffset _lastModeRefresh;
 
     private const double NavExpandedMinWidth = 210;
     // Must fit Fan icon (height × 1.4) + rail padding + button padding.
@@ -56,9 +58,11 @@ public partial class MainWindow : Window
             NavSettings
         ];
 
-        _dashboard = new DashboardView(_hardware);
+        _dashboard = new DashboardView(_hardware, _lifetimeCts.Token);
         ApplyIdentity();
         ApplyProviderStatus();
+        HeaderVersionText.Text = $"v{Services.UpdateService.DisplayVersion}";
+        StatusBarVersion.Text = $"v{Services.UpdateService.DisplayVersion}";
         PageTitleText.Text = "Dashboard";
         PageSubtitleText.Text = "Hardware status and live telemetry";
         SelectNav(NavDashboard);
@@ -67,7 +71,7 @@ public partial class MainWindow : Window
         ApplyNavExpandedState(animate: false);
         UpdateMaximizeButton();
 
-        _shellTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
+        _shellTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _shellTimer.Tick += async (_, _) => await RefreshShellStatusAsync();
         Loaded += async (_, _) =>
         {
@@ -137,22 +141,28 @@ public partial class MainWindow : Window
         Navigate(PageKind.Dashboard, "Dashboard", "Hardware status and live telemetry", _dashboard);
 
     private void FanClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Fan, "Fan Control", "Firmware modes, fixed speed, and safe curves", new FanControlView(_hardware));
+        Navigate(PageKind.Fan, "Fan Control", "Firmware modes, fixed speed, and safe curves",
+            new FanControlView(_hardware));
 
     private void LightingClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Lighting, "Lighting", "Keyboard backlight and verified RGB effects", new LightingView(_hardware));
+        Navigate(PageKind.Lighting, "Lighting", "Keyboard backlight and verified RGB effects",
+            new LightingView(_hardware));
 
     private void ProfilesClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Profiles, "Profiles", "Workload intent without hiding firmware limits", new ProfilesView(_hardware));
+        Navigate(PageKind.Profiles, "Profiles", "Workload intent without hiding firmware limits",
+            new ProfilesView(_hardware));
 
     private void ProjectsClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Projects, "Projects", "Safe project workflows and maintenance actions", new ProjectsView(_hardware));
+        Navigate(PageKind.Projects, "Projects", "Safe project workflows and maintenance actions",
+            new ProjectsView(_hardware));
 
     private void DiagnosticsClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Diagnostics, "Diagnostics", "Honest compatibility and capability report", new DiagnosticsView(_hardware));
+        Navigate(PageKind.Diagnostics, "Diagnostics", "Honest compatibility and capability report",
+            new DiagnosticsView(_hardware));
 
     private void SettingsClick(object sender, RoutedEventArgs e) =>
-        Navigate(PageKind.Settings, "Settings", "Preferences, monitoring, and Lenovo integration", new SettingsView(_hardware));
+        Navigate(PageKind.Settings, "Settings", "Preferences, monitoring, and Lenovo integration",
+            new SettingsView(_hardware));
 
     private void Navigate(PageKind kind, string title, string subtitle, object content)
     {
@@ -193,20 +203,27 @@ public partial class MainWindow : Window
         _refreshingShell = true;
         try
         {
-            var reading = await _hardware.Monitor.ReadAsync(CancellationToken.None);
+            var reading = await _hardware.Monitor.ReadAsync(_lifetimeCts.Token);
             var state = ThermalSafety.Classify(reading.CpuTemperature);
             ApplyHealth(state, reading);
-            using var modeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var mode = await _hardware.FanController.GetCurrentModeAsync(modeTimeout.Token);
-            PerformanceModeBadge.Text = mode is FanMode current
-                ? $"Mode · {ModeLabel(current)}"
-                : _hardware.FanController.IsSupported ? "Mode · Not reported" : "Modes unavailable";
+            if (DateTimeOffset.UtcNow - _lastModeRefresh >= TimeSpan.FromSeconds(5))
+            {
+                using var modeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                using var linkedModeTimeout = CancellationTokenSource.CreateLinkedTokenSource(
+                    _lifetimeCts.Token, modeTimeout.Token);
+                var mode = await _hardware.FanController.GetCurrentModeAsync(linkedModeTimeout.Token);
+                PerformanceModeBadge.Text = mode is FanMode current
+                    ? $"Mode · {ModeLabel(current)}"
+                    : _hardware.FanController.IsSupported ? "Mode · Not reported" : "Modes unavailable";
+                _lastModeRefresh = DateTimeOffset.UtcNow;
+            }
             StatusBarClock.Text = DateTime.Now.ToString("HH:mm:ss");
         }
         catch (Exception ex) when (ex is OperationCanceledException
                                        or TimeoutException
                                        or UnauthorizedAccessException
-                                       or ManagementException)
+                                       or ManagementException
+                                       or ObjectDisposedException)
         {
             ApplyHealth(ThermalState.Unknown, null);
             StatusBarTelemetry.Text = "Telemetry unavailable";
@@ -403,6 +420,7 @@ public partial class MainWindow : Window
     {
         AppUiPreferences.Changed -= OnUiPreferencesChanged;
         _shellTimer?.Stop();
+        _lifetimeCts.Cancel();
         _hardware.Dispose();
         _trayIcon?.Dispose();
         base.OnClosed(e);

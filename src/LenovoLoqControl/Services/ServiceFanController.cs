@@ -10,7 +10,8 @@ namespace LenovoLoqControl.Services;
 public sealed class ServiceFanController : IFanController
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(15);
+    private readonly SemaphoreSlim _modeLock = new(1, 1);
     private readonly bool _serviceAvailable;
 
     public ServiceFanController()
@@ -44,8 +45,21 @@ public sealed class ServiceFanController : IFanController
     {
         if (!Enum.IsDefined(mode))
             return FanControlResult.Unsupported("The requested fan mode is invalid.");
-        var response = await SendAsync(new ServiceRequest(ServiceProtocol.ProtocolVersion, "set-mode", mode), cancellationToken);
-        return new FanControlResult(response.Success, response.Message);
+        await _modeLock.WaitAsync(cancellationToken);
+        try
+        {
+            var response = await SendAsync(new ServiceRequest(ServiceProtocol.ProtocolVersion, "set-mode", mode), cancellationToken);
+            return response.Success
+                ? new FanControlResult(true, response.Message)
+                : mode is FanMode.Performance or FanMode.MaxCooling &&
+                  response.Message.Contains("AC power", StringComparison.OrdinalIgnoreCase)
+                    ? new FanControlResult(false, "Performance and custom modes require AC power.")
+                : new FanControlResult(false, "Fan control is currently unavailable.");
+        }
+        finally
+        {
+            _modeLock.Release();
+        }
     }
 
     public async Task<FanControlResult> SetFanCurveAsync(FanCurve curve, CancellationToken cancellationToken)
