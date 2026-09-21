@@ -80,7 +80,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
                 {
                     var reading = await ReadServiceTelemetryOnceAsync(cancellationToken);
                     if (reading is not null)
-                        return reading;
+                        return await MergeMissingGpuMetricsAsync(reading, cancellationToken);
                     break;
                 }
                 catch (Exception ex) when (attempt == 0 &&
@@ -154,6 +154,29 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
                                    DateTimeOffset.UtcNow - _lastReadingAt <= MaxCachedReadingAge)
         {
             return _lastReading;
+        }
+    }
+
+    private async Task<SensorReading> MergeMissingGpuMetricsAsync(
+        SensorReading serviceReading,
+        CancellationToken cancellationToken)
+    {
+        if (serviceReading.GpuUsage is not null && serviceReading.GpuClock is not null)
+            return serviceReading;
+
+        try
+        {
+            var localReading = await _fallback.ReadAsync(cancellationToken);
+            return serviceReading with
+            {
+                GpuUsage = serviceReading.GpuUsage ?? localReading.GpuUsage,
+                GpuClock = serviceReading.GpuClock ?? localReading.GpuClock
+            };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log($"GPU metric fallback failed: {ex.GetType().Name}: {ex.Message}");
+            return serviceReading;
         }
     }
 
