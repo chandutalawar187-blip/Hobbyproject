@@ -13,6 +13,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     private const uint GpuTemperatureId = 0x05050000;
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private readonly Func<double?> _gpuClockReader;
+    private readonly GpuSensorReader _gpuSensorReader = new();
     private readonly object _cacheLock = new();
     private readonly object _lifecycleLock = new();
     private Task? _disposeTask;
@@ -151,6 +152,13 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             }
             catch (ManagementException) { }
             catch (UnauthorizedAccessException) { }
+
+            if (gpuUsage is null || gpuClock is null)
+            {
+                var fallbackGpu = _gpuSensorReader.Read();
+                gpuUsage ??= fallbackGpu.Usage;
+                gpuClock ??= fallbackGpu.ClockGhz;
+            }
 
             try
             {
@@ -375,6 +383,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                 await _readLock.WaitAsync().ConfigureAwait(false);
             _readLock.Release();
             _readLock.Dispose();
+            _gpuSensorReader.Dispose();
         }
         catch (ObjectDisposedException)
         {
