@@ -217,7 +217,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     {
         var dedicatedAdapters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using (var adapterQuery = new ManagementObjectSearcher(
-                   "SELECT Name, DedicatedUsage, DedicatedLimit FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
+                   "SELECT Name, DedicatedUsage, SharedUsage, TotalCommitted FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
         using (var adapterRows = adapterQuery.Get())
         {
             foreach (ManagementObject row in adapterRows)
@@ -228,13 +228,16 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                     if (string.IsNullOrWhiteSpace(name))
                         continue;
 
-                    var dedicatedLimit = double.TryParse(Convert.ToString(row["DedicatedLimit"]), out var limit)
-                        ? limit
-                        : 0;
                     var dedicatedUsage = double.TryParse(Convert.ToString(row["DedicatedUsage"]), out var usage)
                         ? usage
                         : 0;
-                    if (dedicatedLimit <= 0 && dedicatedUsage <= 0)
+                    var sharedUsage = double.TryParse(Convert.ToString(row["SharedUsage"]), out var shared)
+                        ? shared
+                        : 0;
+                    var totalCommitted = double.TryParse(Convert.ToString(row["TotalCommitted"]), out var committed)
+                        ? committed
+                        : 0;
+                    if (dedicatedUsage <= 0 && totalCommitted <= sharedUsage)
                         continue;
                     var luid = ExtractGpuLuid(name);
                     if (luid is not null)
