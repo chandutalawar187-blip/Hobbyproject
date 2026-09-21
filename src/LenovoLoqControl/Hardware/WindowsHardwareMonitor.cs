@@ -13,6 +13,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     private const uint GpuTemperatureId = 0x05050000;
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private readonly Func<double?> _gpuClockReader;
+    private readonly GpuSensorReader _gpuSensorReader = new();
     private readonly object _cacheLock = new();
     private readonly object _lifecycleLock = new();
     private Task? _disposeTask;
@@ -152,6 +153,13 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
             catch (ManagementException) { }
             catch (UnauthorizedAccessException) { }
 
+            if (gpuUsage is null || gpuClock is null)
+            {
+                var fallbackGpu = _gpuSensorReader.Read();
+                gpuUsage ??= fallbackGpu.Usage;
+                gpuClock ??= fallbackGpu.ClockGhz;
+            }
+
             try
             {
                 using var processor = new ManagementObjectSearcher("SELECT LoadPercentage, CurrentClockSpeed FROM Win32_Processor");
@@ -209,7 +217,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     {
         var dedicatedAdapters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using (var adapterQuery = new ManagementObjectSearcher(
-                   "SELECT Name, DedicatedUsage, DedicatedLimit FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
+                   "SELECT Name, DedicatedUsage, SharedUsage, TotalCommitted FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory"))
         using (var adapterRows = adapterQuery.Get())
         {
             foreach (ManagementObject row in adapterRows)
@@ -220,13 +228,16 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                     if (string.IsNullOrWhiteSpace(name))
                         continue;
 
-                    var dedicatedLimit = double.TryParse(Convert.ToString(row["DedicatedLimit"]), out var limit)
-                        ? limit
-                        : 0;
                     var dedicatedUsage = double.TryParse(Convert.ToString(row["DedicatedUsage"]), out var usage)
                         ? usage
                         : 0;
-                    if (dedicatedLimit <= 0 && dedicatedUsage <= 0)
+                    var sharedUsage = double.TryParse(Convert.ToString(row["SharedUsage"]), out var shared)
+                        ? shared
+                        : 0;
+                    var totalCommitted = double.TryParse(Convert.ToString(row["TotalCommitted"]), out var committed)
+                        ? committed
+                        : 0;
+                    if (dedicatedUsage <= 0 && totalCommitted <= sharedUsage)
                         continue;
                     var luid = ExtractGpuLuid(name);
                     if (luid is not null)
@@ -375,6 +386,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                 await _readLock.WaitAsync().ConfigureAwait(false);
             _readLock.Release();
             _readLock.Dispose();
+            _gpuSensorReader.Dispose();
         }
         catch (ObjectDisposedException)
         {
