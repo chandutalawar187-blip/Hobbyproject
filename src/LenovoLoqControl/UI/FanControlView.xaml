@@ -277,45 +277,6 @@
           <TextBlock Style="{StaticResource Text.BodySecondary}" Margin="0,6,0,14" TextWrapping="Wrap"
                      Text="Firmware defines the temperature points on the X-axis. Drag control points vertically to set fan percentage. Curves are validated before apply."/>
           <StackPanel x:Name="CurvePanel"/>
-          <Border Style="{StaticResource Card.Compact}" Margin="0,12,0,0" Padding="14">
-            <StackPanel>
-              <CheckBox x:Name="ExtremeModeToggle"
-                        Content="Enable Extreme Mode"
-                        FontWeight="SemiBold"
-                        Click="ExtremeModeClick"
-                        ToolTip="Use Custom firmware mode with the verified full-speed cooling override."/>
-              <TextBlock Style="{StaticResource Text.BodySecondary}"
-                         Margin="24,5,0,0"
-                         TextWrapping="Wrap"
-                         Text="Runs the Custom firmware mode at maximum fan speed. AC power is required; temperature and fan noise may increase."/>
-            </StackPanel>
-          </Border>
-          <Border Style="{StaticResource Card.Compact}" Margin="0,12,0,0" Padding="14">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Text.Subtitle}" Text="GPU overclock"/>
-              <TextBlock x:Name="GpuOverclockStatus" Style="{StaticResource Text.BodySecondary}" Margin="0,5,0,10"
-                         Text="Checking NVIDIA support…"/>
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto"/>
-                  <ColumnDefinition Width="90"/>
-                  <ColumnDefinition Width="Auto"/>
-                  <ColumnDefinition Width="90"/>
-                  <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Core +" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBox x:Name="GpuCoreOffset" Grid.Column="1" Text="150" Margin="0,0,12,0"/>
-                <TextBlock Grid.Column="2" Text="VRAM +" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBox x:Name="GpuMemoryOffset" Grid.Column="3" Text="200" Margin="0,0,12,0"/>
-                <StackPanel Grid.Column="4" Orientation="Horizontal">
-                  <Button Content="Apply" Click="ApplyGpuOverclockClick" Margin="0,0,8,0"/>
-                  <Button Content="Reset" Click="ResetGpuOverclockClick"/>
-                </StackPanel>
-              </Grid>
-              <TextBlock Style="{StaticResource Text.Caption}" Margin="0,8,0,0"
-                         Text="Offsets are limited to +150 MHz core and +200 MHz VRAM. AC power is required."/>
-            </StackPanel>
-          </Border>
         </StackPanel>
       </Border>
     </Grid>
