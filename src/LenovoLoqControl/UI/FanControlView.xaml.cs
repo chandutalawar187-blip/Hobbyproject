@@ -53,9 +53,6 @@ public partial class FanControlView : UserControl
             : _hardware.FanController.AvailabilityMessage;
 
         SetModeButtonsEnabled(supported);
-        GpuOverclockStatus.Text = _hardware.GpuOverclock.AvailabilityMessage;
-        GpuCoreOffset.IsEnabled = _hardware.GpuOverclock.IsSupported;
-        GpuMemoryOffset.IsEnabled = _hardware.GpuOverclock.IsSupported;
 
         _liveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _liveTimer.Tick += async (_, _) => await RefreshLiveReadingsAsync();
@@ -696,66 +693,6 @@ public partial class FanControlView : UserControl
         HighlightMode(ModeCustom);
         ShowResult("Custom selected. Edit the curve below, then Apply curve to send it to firmware.", accepted: null);
         CurvePanel.BringIntoView();
-    }
-
-    private async void ExtremeModeClick(object sender, RoutedEventArgs e)
-    {
-        if (!ExtremeModeToggle.IsEnabled)
-            return;
-
-        var enabled = ExtremeModeToggle.IsChecked == true;
-        ExtremeModeToggle.IsEnabled = false;
-        try
-        {
-            var mode = enabled ? FanMode.MaxCooling : FanMode.Custom;
-            ShowResult(enabled ? "Enabling Extreme Mode…" : "Disabling Extreme Mode…", accepted: null);
-            var result = await _hardware.FanController.SetFanModeAsync(mode, CancellationToken.None);
-            if (!result.Accepted &&
-                mode is FanMode.MaxCooling &&
-                result.Message.Contains("AC power", StringComparison.OrdinalIgnoreCase))
-            {
-                result = new FanControlResult(false, "Performance and custom modes require AC power.");
-            }
-            ShowResult(result.Message, result.Accepted);
-            if (result.Accepted)
-            {
-                _appMaxCoolingActive = enabled;
-                HighlightMode(enabled ? ModeMaxCooling : ModeCustom);
-            }
-            else
-                ExtremeModeToggle.IsChecked = !enabled;
-        }
-        catch (Exception ex) when (ex is ManagementException or COMException
-            or InvalidOperationException or UnauthorizedAccessException or TimeoutException
-            or ArgumentException)
-        {
-            ExtremeModeToggle.IsChecked = !enabled;
-            ShowResult($"The firmware did not change Extreme Mode: {ex.Message}", accepted: false);
-        }
-        finally
-        {
-            ExtremeModeToggle.IsEnabled = _hardware.FanController.IsSupported;
-        }
-    }
-
-    private async void ApplyGpuOverclockClick(object sender, RoutedEventArgs e)
-    {
-        if (!int.TryParse(GpuCoreOffset.Text, out var core) ||
-            !int.TryParse(GpuMemoryOffset.Text, out var memory) ||
-            core is < 0 or > 150 || memory is < 0 or > 200)
-        {
-            GpuOverclockStatus.Text = "Use core 0–150 MHz and VRAM 0–200 MHz.";
-            return;
-        }
-
-        var result = await _hardware.GpuOverclock.ApplyAsync(core, memory, CancellationToken.None);
-        GpuOverclockStatus.Text = result.Message;
-    }
-
-    private async void ResetGpuOverclockClick(object sender, RoutedEventArgs e)
-    {
-        var result = await _hardware.GpuOverclock.ResetAsync(CancellationToken.None);
-        GpuOverclockStatus.Text = result.Message;
     }
 
     private async Task ApplyModeAsync(Button button, string label, FanMode mode)
