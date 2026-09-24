@@ -23,6 +23,10 @@ control, diagnostics, settings, and Lenovo integration management.
 | --- | --- |
 | ![LOQ Control application view](.assets/Screenshot%202026-09-17%20175120.png) | ![LOQ Control Lenovo integration](.assets/Screenshot%202026-09-17%20175135.png) |
 
+## System Architecture
+
+![Diagram](.assets/diagram.png) 
+
 ## Build
 
 Requirements: Windows 10/11 x64 and the .NET 8 SDK.
