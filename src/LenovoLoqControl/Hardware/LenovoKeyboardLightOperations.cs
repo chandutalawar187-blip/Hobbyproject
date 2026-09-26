@@ -32,12 +32,15 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
         var rgbType = DetectRgbHidType();
         var lightingType = GetLightingType();
         _useEnergyDriver = lightingType is null && ProbeEnergyDriver();
+        // Firmware lighting type 5 is not sufficient evidence of RGB. Some
+        // single-color LOQ keyboards expose the same Lenovo lighting provider
+        // type, so only a verified RGB HID interface may classify the device
+        // as RGB. If brightness control is exposed without that interface,
+        // report the truthful white-backlight capability instead.
         ZoneType = rgbType != KeyboardZoneType.Unsupported
             ? rgbType
-            : lightingType == 1 || _useEnergyDriver
+            : lightingType is 1 or 5 || _useEnergyDriver
                 ? KeyboardZoneType.WhiteBacklit
-                : lightingType == 5
-                    ? KeyboardZoneType.RgbLayoutUnknown
                 : KeyboardZoneType.Unsupported;
     }
 
@@ -343,10 +346,8 @@ internal sealed class LenovoKeyboardLightOperations : IDisposable
         var lightingType = GetLightingType();
         return rgbType != KeyboardZoneType.Unsupported
             ? rgbType
-            : lightingType == 1 || ProbeEnergyDriver()
+            : lightingType is 1 or 5 || ProbeEnergyDriver()
                 ? KeyboardZoneType.WhiteBacklit
-                : lightingType == 5
-                    ? KeyboardZoneType.RgbLayoutUnknown
                 : KeyboardZoneType.Unsupported;
     }
 

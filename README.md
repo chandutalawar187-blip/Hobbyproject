@@ -23,6 +23,24 @@ control, diagnostics, settings, and Lenovo integration management.
 | --- | --- |
 | ![LOQ Control application view](.assets/Screenshot%202026-09-17%20175120.png) | ![LOQ Control Lenovo integration](.assets/Screenshot%202026-09-17%20175135.png) |
 
+## System architecture
+
+The desktop UI and core logic use a capability-based hardware backend, with the optional elevated service isolated behind a versioned named-pipe protocol. Hardware-specific interfaces remain separate from the presentation layer.
+
+![LOQ Control system architecture](.assets/diagram.png)
+
+### Telemetry acquisition pipeline
+
+Independent Lenovo firmware, CPU, GPU, and system metric reads are acquired concurrently, merged into one timestamped reading, and delivered to the UI. Recent samples are reused to avoid duplicate overlapping work.
+
+![LOQ Control telemetry acquisition pipeline](.assets/telemetry-pipeline.svg)
+
+### CPU instruction pipeline example
+
+This conceptual diagram relates the CPU's hardware-managed fetch/decode/execute pipeline to one LOQ Control telemetry refresh. The application refresh cycle is not a single CPU clock cycle; it spans many processor cycles.
+
+![CPU instruction prefetch and telemetry example](.assets/cpu-instruction-pipeline.svg)
+
 ## Build
 
 Requirements: Windows 10/11 x64 and the .NET 8 SDK.

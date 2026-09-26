@@ -51,6 +51,30 @@ public sealed class NvidiaGpuOverclockController : IGpuOverclockController
     public bool IsSupported { get; }
     public string AvailabilityMessage { get; }
 
+    public ulong? ReadDedicatedVideoMemoryBytes(string adapterName)
+    {
+        lock (_sync)
+        {
+            var gpu = _gpu;
+            if (!_initialized || !IsSupported || gpu is null ||
+                string.IsNullOrWhiteSpace(adapterName) ||
+                !string.Equals(gpu.FullName, adapterName, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            try
+            {
+                var memorySizeInKb = gpu.MemoryInformation.PhysicalFrameBufferSizeInkB;
+                return memorySizeInKb > 0
+                    ? checked((ulong)memorySizeInKb * 1024UL)
+                    : null;
+            }
+            catch (Exception ex) when (ex is NVIDIAApiException or InvalidOperationException)
+            {
+                return null;
+            }
+        }
+    }
+
     public double? ReadCurrentGraphicsClockGhz()
     {
         lock (_sync)

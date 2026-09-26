@@ -504,11 +504,21 @@ public partial class DiagnosticsView : UserControl
                 "SELECT Name, DriverVersion, AdapterRAM, VideoModeDescription FROM Win32_VideoController");
             foreach (ManagementObject adapter in graphics.Get())
             {
-                var memory = adapter["AdapterRAM"] is object rawMemory
+                var adapterName = adapter["Name"]?.ToString() ?? "Unknown adapter";
+                var isNvidiaAdapter = adapterName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase);
+                var dedicatedMemoryBytes = isNvidiaAdapter
+                    ? _hardware.GpuOverclock.ReadDedicatedVideoMemoryBytes(adapterName)
+                    : null;
+                var reportedMemoryBytes = adapter["AdapterRAM"] is object rawMemory
                     && ulong.TryParse(rawMemory.ToString(), out var bytes)
-                    ? $"{bytes / (1024d * 1024d * 1024d):0.#} GB"
-                    : "VRAM unavailable";
-                graphicsParts.Add($"{adapter["Name"] ?? "Unknown adapter"} · Driver {adapter["DriverVersion"] ?? "Unavailable"} · {memory} · {adapter["VideoModeDescription"] ?? "Mode unavailable"}");
+                    && bytes > 0
+                    ? bytes
+                    : (ulong?)null;
+                var memoryBytes = isNvidiaAdapter ? dedicatedMemoryBytes : reportedMemoryBytes;
+                var memory = memoryBytes is ulong size
+                    ? $"{size / (1024d * 1024d * 1024d):0.#} GB {(isNvidiaAdapter ? "dedicated VRAM" : "reported graphics memory")}"
+                    : isNvidiaAdapter ? "Dedicated VRAM unavailable via NVAPI" : "Graphics memory unavailable";
+                graphicsParts.Add($"{adapterName} · Driver {adapter["DriverVersion"] ?? "Unavailable"} · {memory} · {adapter["VideoModeDescription"] ?? "Mode unavailable"}");
             }
         }
         catch

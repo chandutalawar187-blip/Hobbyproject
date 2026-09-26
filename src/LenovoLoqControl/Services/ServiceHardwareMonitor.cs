@@ -11,6 +11,7 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IHardwareMonitor _fallback;
+    private readonly Func<double?>? _cpuClockReader;
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private readonly object _lifecycleLock = new();
     private Task? _disposeTask;
@@ -21,9 +22,10 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
     private const long MaxTelemetryLogBytes = 256 * 1024;
     private int _disposed;
 
-    public ServiceHardwareMonitor(IHardwareMonitor fallback)
+    public ServiceHardwareMonitor(IHardwareMonitor fallback, Func<double?>? cpuClockReader = null)
     {
         _fallback = fallback;
+        _cpuClockReader = cpuClockReader;
         Identity = fallback.Identity;
     }
 
@@ -161,22 +163,50 @@ public sealed class ServiceHardwareMonitor : IHardwareMonitor
         SensorReading serviceReading,
         CancellationToken cancellationToken)
     {
-        if (serviceReading.GpuUsage is not null && serviceReading.GpuClock is not null)
+        var localCpuClock = await ReadCpuClockAsync(cancellationToken).ConfigureAwait(false);
+
+        if (serviceReading.GpuUsage is not null &&
+            serviceReading.GpuClock is not null &&
+            localCpuClock is null)
             return serviceReading;
 
         try
         {
-            var localReading = await _fallback.ReadAsync(cancellationToken);
+            SensorReading? localReading = null;
+            if (serviceReading.GpuUsage is null || serviceReading.GpuClock is null)
+                localReading = await _fallback.ReadAsync(cancellationToken);
+
             return serviceReading with
             {
-                GpuUsage = serviceReading.GpuUsage ?? localReading.GpuUsage,
-                GpuClock = serviceReading.GpuClock ?? localReading.GpuClock
+                CpuClock = localCpuClock ?? localReading?.CpuClock ?? serviceReading.CpuClock,
+                GpuUsage = serviceReading.GpuUsage ?? localReading?.GpuUsage,
+                GpuClock = serviceReading.GpuClock ?? localReading?.GpuClock
             };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Log($"GPU metric fallback failed: {ex.GetType().Name}: {ex.Message}");
-            return serviceReading;
+            return serviceReading with { CpuClock = localCpuClock ?? serviceReading.CpuClock };
+        }
+    }
+
+    private async Task<double?> ReadCpuClockAsync(CancellationToken cancellationToken)
+    {
+        if (_cpuClockReader is null)
+            return null;
+
+        try
+        {
+            return await Task.Run(_cpuClockReader, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log($"CPU clock refresh failed: {ex.GetType().Name}: {ex.Message}");
+            return null;
         }
     }
 

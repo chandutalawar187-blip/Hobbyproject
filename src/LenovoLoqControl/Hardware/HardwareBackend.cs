@@ -31,7 +31,7 @@ public sealed class HardwareBackend : IHardwareBackend
         var localMonitor = new WindowsHardwareMonitor(ReadGpuClock);
         var serviceFan = useElevatedService ? new ServiceFanController() : null;
         Monitor = serviceFan?.IsSupported == true
-            ? new ServiceHardwareMonitor(localMonitor)
+            ? new ServiceHardwareMonitor(localMonitor, localMonitor.ReadCurrentCpuClockGhz)
             : localMonitor;
         if (serviceFan?.IsSupported == true)
         {

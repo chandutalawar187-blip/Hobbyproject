@@ -14,6 +14,7 @@ public interface IGpuOverclockController : IDisposable
 {
     bool IsSupported { get; }
     string AvailabilityMessage { get; }
+    ulong? ReadDedicatedVideoMemoryBytes(string adapterName);
     Task<FanControlResult> ApplyAsync(int coreOffsetMhz, int memoryOffsetMhz, CancellationToken cancellationToken);
     Task<FanControlResult> ResetAsync(CancellationToken cancellationToken);
 }

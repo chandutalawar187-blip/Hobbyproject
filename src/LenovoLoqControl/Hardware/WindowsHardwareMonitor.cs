@@ -9,6 +9,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
     private const string LenovoOtherMethodQuery = "SELECT * FROM LENOVO_OTHER_METHOD";
     private const uint CpuFanSpeedId = 0x04030001;
     private const uint GpuFanSpeedId = 0x04030002;
+    private const double SuspectFirmwareFanRpm = 4800;
     private const uint CpuTemperatureId = 0x05040000;
     private const uint GpuTemperatureId = 0x05050000;
     private readonly SemaphoreSlim _readLock = new(1, 1);
@@ -93,7 +94,7 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
                     return _cachedReading;
             }
 
-            var reading = await Task.Run(() => ReadCore(cancellationToken), cancellationToken);
+            var reading = await ReadCoreAsync(cancellationToken);
             lock (_cacheLock)
             {
                 _cachedReading = reading;
@@ -109,108 +110,190 @@ public sealed class WindowsHardwareMonitor : IHardwareMonitor
         }
     }
 
-    private SensorReading ReadCore(CancellationToken cancellationToken)
+    private async Task<SensorReading> ReadCoreAsync(CancellationToken cancellationToken)
     {
-            cancellationToken.ThrowIfCancellationRequested();
-            double? cpuUsage = null;
-            double? cpuClock = null;
-            double? memoryUsage = null;
-            double? battery = null;
-            bool? charging = null;
-            double? cpuTemperature = null;
-            double? gpuTemperature = null;
-            double? gpuUsage = null;
-            double? gpuClock = null;
-            double? cpuFanRpm = null;
-            double? gpuFanRpm = null;
+        cancellationToken.ThrowIfCancellationRequested();
+        var lenovoTask = Task.Run(ReadLenovoSensors, cancellationToken);
+        var cpuTask = Task.Run(ReadCpuMetrics, cancellationToken);
+        var systemTask = Task.Run(ReadSystemMetrics, cancellationToken);
+        var gpuTask = Task.Run(ReadGpuMetrics, cancellationToken);
 
+        await Task.WhenAll(lenovoTask, cpuTask, systemTask, gpuTask).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var lenovo = await lenovoTask.ConfigureAwait(false);
+        var cpu = await cpuTask.ConfigureAwait(false);
+        var system = await systemTask.ConfigureAwait(false);
+        var gpu = await gpuTask.ConfigureAwait(false);
+        var cpuTemperature = lenovo.CpuTemperature ?? ReadWindowsThermalZoneTemperature();
+
+        return new SensorReading(cpuTemperature, lenovo.GpuTemperature, cpu.Usage, gpu.Usage,
+            cpu.ClockGhz, gpu.ClockGhz, lenovo.CpuFanRpm, lenovo.GpuFanRpm,
+            system.MemoryUsage, system.Battery, system.Charging, DateTimeOffset.Now);
+    }
+
+    private (double? CpuTemperature, double? GpuTemperature, double? CpuFanRpm, double? GpuFanRpm)
+        ReadLenovoSensors()
+    {
+        double? cpuTemperature = null;
+        double? gpuTemperature = null;
+        double? cpuFanRpm = null;
+        double? gpuFanRpm = null;
+        try
+        {
+            using var other = new ManagementObjectSearcher(@"root\WMI", LenovoOtherMethodQuery);
+            using var rows = other.Get();
+            using var row = rows.Cast<ManagementObject>().FirstOrDefault();
+            if (row is not null)
+            {
+                cpuTemperature = ReadLenovoFeature(row, CpuTemperatureId);
+                gpuTemperature = ReadLenovoFeature(row, GpuTemperatureId);
+                cpuFanRpm = ReadLenovoFeature(row, CpuFanSpeedId);
+                gpuFanRpm = ReadLenovoFeature(row, GpuFanSpeedId);
+            }
+        }
+        catch (ManagementException) { }
+        catch (UnauthorizedAccessException) { }
+
+        if (cpuFanRpm is double cpuRpm &&
+            gpuFanRpm is double gpuRpm &&
+            cpuRpm == SuspectFirmwareFanRpm &&
+            gpuRpm == SuspectFirmwareFanRpm &&
+            cpuTemperature is <= 60 &&
+            gpuTemperature is <= 60)
+        {
+            // Several LOQ firmware revisions report the same 4800 RPM value
+            // for both fans when the tachometer data is unavailable. Do not
+            // present that sentinel as real fan speed at low temperatures.
+            cpuFanRpm = null;
+            gpuFanRpm = null;
+        }
+
+        return (cpuTemperature, gpuTemperature,
+            NormalizeFanRpm(cpuFanRpm), NormalizeFanRpm(gpuFanRpm));
+    }
+
+    private static double? NormalizeFanRpm(double? rpm) =>
+        rpm is > 0 and <= 10000 ? rpm : null;
+
+    private (double? Usage, double? ClockGhz) ReadCpuMetrics()
+    {
+        double? usage = null;
+        var clockGhz = ReadCurrentCpuClockGhz();
+        try
+        {
+            using var processor = new ManagementObjectSearcher(
+                "SELECT LoadPercentage FROM Win32_Processor");
+            using var rows = processor.Get();
+            var processorRows = rows.Cast<ManagementObject>().ToArray();
             try
             {
-                using var other = new ManagementObjectSearcher(
-                    @"root\WMI", LenovoOtherMethodQuery);
-                using var rows = other.Get();
-                using var row = rows.Cast<ManagementObject>().FirstOrDefault();
-                if (row is not null)
+                if (processorRows.Length > 0)
                 {
-                    cpuTemperature = ReadLenovoFeature(row, CpuTemperatureId);
-                    gpuTemperature = ReadLenovoFeature(row, GpuTemperatureId);
-                    cpuFanRpm = ReadLenovoFeature(row, CpuFanSpeedId);
-                    gpuFanRpm = ReadLenovoFeature(row, GpuFanSpeedId);
+                    usage = processorRows.Average(row => Convert.ToDouble(row["LoadPercentage"] ?? 0));
                 }
             }
-            catch (ManagementException) { }
-            catch (UnauthorizedAccessException) { }
-
-            if (cpuTemperature is null)
-                cpuTemperature = ReadWindowsThermalZoneTemperature();
-
-            gpuClock = _gpuClockReader();
-
-            try
+            finally
             {
-                gpuUsage = ReadDiscreteGpuUsage();
+                foreach (var processorRow in processorRows)
+                    processorRow.Dispose();
             }
-            catch (ManagementException) { }
-            catch (UnauthorizedAccessException) { }
+        }
+        catch (ManagementException) { }
 
-            if (gpuUsage is null || gpuClock is null)
+        return (usage, clockGhz);
+    }
+
+    private static (double? MemoryUsage, double? Battery, bool? Charging) ReadSystemMetrics()
+    {
+        double? memoryUsage = null;
+        double? battery = null;
+        bool? charging = null;
+        try
+        {
+            using var os = new ManagementObjectSearcher(
+                "SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
+            using var rows = os.Get();
+            using var row = rows.Cast<ManagementObject>().FirstOrDefault();
+            if (row is not null)
             {
-                var fallbackGpu = _gpuSensorReader.Read();
-                gpuUsage ??= fallbackGpu.Usage;
-                gpuClock ??= fallbackGpu.ClockGhz;
+                var total = Convert.ToDouble(row["TotalVisibleMemorySize"]);
+                var free = Convert.ToDouble(row["FreePhysicalMemory"]);
+                memoryUsage = total <= 0 ? null : (total - free) / total * 100d;
             }
+        }
+        catch (ManagementException) { }
 
-            try
+        try
+        {
+            using var batteries = new ManagementObjectSearcher(
+                "SELECT EstimatedChargeRemaining, BatteryStatus FROM Win32_Battery");
+            using var rows = batteries.Get();
+            using var row = rows.Cast<ManagementObject>().FirstOrDefault();
+            if (row is not null)
             {
-                using var processor = new ManagementObjectSearcher("SELECT LoadPercentage, CurrentClockSpeed FROM Win32_Processor");
-                using var rows = processor.Get();
-                var processorRows = rows.Cast<ManagementObject>().ToArray();
-                try
-                {
-                    if (processorRows.Length > 0)
-                    {
-                        cpuUsage = processorRows.Average(row => Convert.ToDouble(row["LoadPercentage"] ?? 0));
-                        cpuClock = processorRows.Average(row => Convert.ToDouble(row["CurrentClockSpeed"] ?? 0)) / 1000d;
-                    }
-                }
-                finally
-                {
-                    foreach (var processorRow in processorRows)
-                        processorRow.Dispose();
-                }
+                battery = Convert.ToDouble(row["EstimatedChargeRemaining"]);
+                charging = Convert.ToInt32(row["BatteryStatus"]) is 2 or 6 or 7 or 8 or 9;
             }
-            catch (ManagementException) { }
+        }
+        catch (ManagementException) { }
 
-            try
+        return (memoryUsage, battery, charging);
+    }
+
+    private (double? Usage, double? ClockGhz) ReadGpuMetrics()
+    {
+        var clockGhz = _gpuClockReader();
+        double? usage = null;
+        try
+        {
+            usage = ReadDiscreteGpuUsage();
+        }
+        catch (ManagementException) { }
+        catch (UnauthorizedAccessException) { }
+
+        if (usage is null || clockGhz is null)
+        {
+            var fallbackGpu = _gpuSensorReader.Read();
+            usage ??= fallbackGpu.Usage;
+            clockGhz ??= fallbackGpu.ClockGhz;
+        }
+
+        return (usage, clockGhz);
+    }
+
+    public double? ReadCurrentCpuClockGhz()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT ProcessorFrequency, PercentProcessorPerformance " +
+                "FROM Win32_PerfFormattedData_Counters_ProcessorInformation WHERE Name='_Total'");
+            using var rows = searcher.Get();
+            using var row = rows.Cast<ManagementObject>().FirstOrDefault();
+            if (row is null)
+                return null;
+
+            var frequencyMhz = Convert.ToDouble(row["ProcessorFrequency"] ?? 0);
+            var performancePercent = Convert.ToDouble(row["PercentProcessorPerformance"] ?? 0);
+            if (performancePercent > 0)
             {
-                using var os = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
-                using var rows = os.Get();
-                using var row = rows.Cast<ManagementObject>().FirstOrDefault();
-                if (row is not null)
-                {
-                    var total = Convert.ToDouble(row["TotalVisibleMemorySize"]);
-                    var free = Convert.ToDouble(row["FreePhysicalMemory"]);
-                    memoryUsage = total <= 0 ? null : (total - free) / total * 100d;
-                }
+                using var baseClockQuery = new ManagementObjectSearcher(
+                    "SELECT MaxClockSpeed FROM Win32_Processor");
+                using var baseClockRows = baseClockQuery.Get();
+                using var processor = baseClockRows.Cast<ManagementObject>().FirstOrDefault();
+                var baseClockMhz = Convert.ToDouble(processor?["MaxClockSpeed"] ?? 0);
+                if (baseClockMhz > 0)
+                    return baseClockMhz * performancePercent / 100d / 1000d;
             }
-            catch (ManagementException) { }
 
-            try
-            {
-                using var batteries = new ManagementObjectSearcher("SELECT EstimatedChargeRemaining, BatteryStatus FROM Win32_Battery");
-                using var rows = batteries.Get();
-                using var row = rows.Cast<ManagementObject>().FirstOrDefault();
-                if (row is not null)
-                {
-                    battery = Convert.ToDouble(row["EstimatedChargeRemaining"]);
-                    charging = Convert.ToInt32(row["BatteryStatus"]) is 2 or 6 or 7 or 8 or 9;
-                }
-            }
-            catch (ManagementException) { }
-
-            return new SensorReading(cpuTemperature, gpuTemperature, cpuUsage, gpuUsage, cpuClock, gpuClock,
-                cpuFanRpm, gpuFanRpm,
-                memoryUsage, battery, charging, DateTimeOffset.Now);
+            return frequencyMhz > 0 ? frequencyMhz / 1000d : null;
+        }
+        catch (ManagementException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+        catch (InvalidOperationException) { return null; }
+        catch (FormatException) { return null; }
+        catch (OverflowException) { return null; }
     }
 
     private static double? ReadDiscreteGpuUsage()
