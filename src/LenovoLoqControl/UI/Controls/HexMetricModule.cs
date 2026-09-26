@@ -405,8 +405,8 @@ public sealed class HexMetricModule : Grid
     public void SetModeAccent(FanMode mode) => ApplyModeAccent(mode);
 
     /// <summary>
-    /// Applies progress, detail, and fan RPM in one pass so CPU/GPU modules
-    /// don't start competing animation loops from separate DP callbacks.
+    /// Applies live progress, detail, and fan RPM in one pass without starting
+    /// a per-frame animation loop for every telemetry sample.
     /// </summary>
     public void ApplyLiveMetrics(double? progress, string detailText, double? fanRpm = null)
     {
@@ -548,10 +548,6 @@ public sealed class HexMetricModule : Grid
 
     private void StopAccentAnimation() => ClearAccentClocks();
 
-    /// <summary>
-    /// Legion-style continuous motion: breathing glow, tip pulse, and soft progress shimmer.
-    /// Keeps LIVE TELEMETRY alive even when sensor values are steady (control.png / ui.png).
-    /// </summary>
     private void StartAmbientAnimation()
     {
         StopAmbientAnimation();
@@ -559,62 +555,12 @@ public sealed class HexMetricModule : Grid
             return;
 
         EnsureGlowAttached(true);
-        var baseOpacity = Math.Clamp(_ambientGlowBase, 0.16, 0.42);
-        var low = Math.Max(0.12, baseOpacity * 0.62);
-        var high = Math.Min(0.58, baseOpacity * 1.45);
-
-        _glowEffect.Opacity = baseOpacity;
-        _glowEffect.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation
-        {
-            From = low,
-            To = high,
-            Duration = TimeSpan.FromMilliseconds(1700),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = AccentEase
-        });
-
-        _progressPath.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation
-        {
-            From = 0.82,
-            To = 1.0,
-            Duration = TimeSpan.FromMilliseconds(1400),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = AccentEase
-        });
-
-        _tipGlow.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation
-        {
-            From = 0.4,
-            To = 0.95,
-            Duration = TimeSpan.FromMilliseconds(1100),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = AccentEase
-        });
-
-        var tipPulse = new DoubleAnimation
-        {
-            From = 0.85,
-            To = 1.2,
-            Duration = TimeSpan.FromMilliseconds(1100),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = AccentEase
-        };
-        _tipScale.BeginAnimation(ScaleTransform.ScaleXProperty, tipPulse);
-        _tipScale.BeginAnimation(ScaleTransform.ScaleYProperty, tipPulse.Clone());
-
-        _innerStrokeBrush.BeginAnimation(SolidColorBrush.OpacityProperty, new DoubleAnimation
-        {
-            From = 0.55,
-            To = 0.95,
-            Duration = TimeSpan.FromMilliseconds(2000),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = AccentEase
-        });
+        _glowEffect.Opacity = Math.Clamp(_ambientGlowBase, 0.16, 0.42);
+        _tipGlow.Opacity = 0.4;
+        _progressPath.Opacity = 1;
+        _tipScale.ScaleX = 1;
+        _tipScale.ScaleY = 1;
+        _innerStrokeBrush.Opacity = 1;
     }
 
     private void StopAmbientAnimation()
